@@ -1,5 +1,4 @@
-> {-# OPTIONS_GHC -F -pgmF she #-}
-> {-# LANGUAGE TypeOperators #-}
+> {-# LANGUAGE TypeOperators, PatternSynonyms #-}
 
 > module Fix where
 

@@ -12,7 +12,6 @@
 > import Imports
 > import Aspect
 > import DeBruijn
-> import Patsy
 > import TypesToKinds
 > import IdiomBrackets
 > import Superclass
@@ -28,19 +27,14 @@
 >       hs2 = piggle higs hs1
 >       hs2'5 = deBruijn hs2
 >       hs2'75 = map idiomBrackets hs2'5
->       ((ps0, _), _) = traverse getPatsy hersi0
->       ((ps1, herso1), hs3) = traverse getPatsy hs2'75
->       (hs3'5, herso2) = superclass nl hersi0 hs3
->       hs4 = case prepare (ps0 ++ ps1) of
->               Nothing -> hs3'5
->               Just ps -> map (processes ps) hs3'5
->       hs5 = typesToKinds (noDerSing hs4) ++
->             redent nl ((hs4 >>= dataGrok) ++ (hs4 >>= singGrok))
+>       (hs3'5, herso2) = superclass nl hersi0 hs2'75
+>       hs5 = typesToKinds (noDerSing hs3'5) ++
+>             redent nl ((hs3'5 >>= dataGrok) ++ (hs3'5 >>= singGrok))
 >   in  (inh ++
 >        [[NL (mo ++ ".hers", 0)],
 >         [KW "module", Spc " ", Uid mo, Spc " ", L "where"
 >           (redent [NL (mo ++ ".hers", 0), Spc "  "]
->            (herso0 ++ [[NL (mo ++ ".hers", 0)]] ++ herso1
+>            (herso0 ++ [[NL (mo ++ ".hers", 0)]]
 >                    ++ [[NL (mo ++ ".hers", 0)]] ++ herso2))]]
 >       , hs5)
 

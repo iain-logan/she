@@ -41,7 +41,6 @@ executable she
                         Imports
                         HaLay
                         Parsley
-                        Patsy
                         ShesHers
                         Superclass
                         TypesToKinds

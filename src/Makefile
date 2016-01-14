@@ -1,6 +1,6 @@
 default: she
 
-she: Main.lhs Parsley.lhs Patsy.lhs TypesToKinds.lhs HaLay.lhs Imports.lhs Aspect.lhs Superclass.lhs
+she: Main.lhs Parsley.lhs TypesToKinds.lhs HaLay.lhs Imports.lhs Aspect.lhs Superclass.lhs
 	ghc --make Main -o she
 
 install: she
@@ -18,9 +18,6 @@ Aspect.o : HaLay.hi
 DeBruijn.o : DeBruijn.lhs
 DeBruijn.o : HaLay.hi
 DeBruijn.o : Parsley.hi
-Patsy.o : Patsy.lhs
-Patsy.o : HaLay.hi
-Patsy.o : Parsley.hi
 TypesToKinds.o : TypesToKinds.lhs
 TypesToKinds.o : Parsley.hi
 TypesToKinds.o : HaLay.hi
@@ -30,7 +27,6 @@ IdiomBrackets.o : HaLay.hi
 Main.o : Main.lhs
 Main.o : IdiomBrackets.hi
 Main.o : TypesToKinds.hi
-Main.o : Patsy.hi
 Main.o : DeBruijn.hi
 Main.o : Aspect.hi
 Main.o : Imports.hi
