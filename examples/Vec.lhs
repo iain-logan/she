@@ -53,6 +53,7 @@
 >     vapp :: Vec {m} (s -> t) -> Vec {m} s -> Vec {m} t
 >     vapp VNil VNil = VNil
 >     vapp (f :> fs)  (s :> ss) = f s :> vapp fs ss
+>   hiding instance Functor (Vec {n})
 
 > fiveByFive :: Vec {S (S (S (S (S Z))))} Int
 > fiveByFive = pure 5
