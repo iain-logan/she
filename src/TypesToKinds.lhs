@@ -1,10 +1,13 @@
 > module TypesToKinds where
 
-> import Control.Applicative
 > import Data.List
+> import Control.Applicative
 
 > import HaLay
 > import Parsley
+
+> singPrefix :: String
+> singPrefix = "S"
 
 > dataGrok :: [Tok] -> [[Tok]]
 > dataGrok cs@(KW "newtype" : T Ty _ : ds)
@@ -69,76 +72,23 @@
 >      <|> next *> pArity
 
 > pTele :: P Tok ([(String, [Tok])], [Tok])
-> pTele = (,)  <$> some (spc *> pBr Rnd piB) <* spc <* teq (Sym ".")
+> pTele = (,)  <$> some (spc *> pBr Rnd piB) <* spc <* teq (Sym "->")
 >              <*> pRest
 >              where
 >    piB :: P Tok (String, [Tok])
 >    piB = (,) <$ spc <*> lid <* spc <* teq (Sym "::") <* spc <*> pRest
 
-> tyTTK :: [Tok] -> Maybe [Tok]
-> tyTTK (B Crl [T Ex (Sym ":" : us)] : ts) = case parse pProxyRequest us of
->   Just (tm, ty) -> Just $
->     [Uid "SheChecks", Spc " ", B Rnd ty, Spc " ", B Rnd (munge exTTK tm)]
->     ++ munge tyTTK ts
->   _ -> Nothing
-> tyTTK (B Crl [T Ex us] : ts)  = Just $ B Rnd (munge exTTK us) : munge tyTTK ts
-> tyTTK (B Rnd us : ts) = (: munge tyTTK ts) <$> (sing <$> parse pSing us) where
->   sing t = B Rnd [Uid "SheSingleton", Spc " ", B Rnd t]
->   pSing = spc *> teq (Sym "::") *> pTag Ki pRest
-> tyTTK (Lid "pi" : ts)         = pity <$> parse pTele ts where
->   pity :: ([(String, [Tok])], [Tok]) -> [Tok]
->   pity (xss, ts) =
->     [KW "forall", Spc " "] ++
->     (xss >>= \ (x, _) -> [Lid x, Spc " "]) ++
->     [Sym ".", Spc " "] ++
->     (xss >>= \ (x, ss) ->
->       [Uid "SheSingleton", Spc " ", B Rnd (munge tyTTK ss), Spc " ", Lid x,
->        Spc " ", Sym "->", Spc " "]) ++
->     munge tyTTK ts
-> tyTTK (T Ki us : ts)          = Just $ T Ki (munge kiTTK us) : munge tyTTK ts
-> tyTTK _ = Nothing
-
-> kiTTK :: [Tok] -> Maybe [Tok]
-> kiTTK (B Crl [T Ty us] : ts)  = Just $ Sym "*" : munge kiTTK ts
-> kiTTK (Lid "pi" : ts)         = piki <$> parse pTele ts where
->   piki :: ([(String, [Tok])], [Tok]) -> [Tok]
->   piki (xks, ts) =
->     (xks >>= \ (_, ks) ->
->       [B Rnd (munge kiTTK ks), Spc " ", Sym "->", Spc " "]) ++
->     munge kiTTK ts
-> kiTTK (KW "forall" : ts)      = case span (/= Sym ".") ts of
->   (_, _ : ts) -> Just $ munge kiTTK ts
->   _ -> Nothing
-> kiTTK _ = Nothing
-
-> ttkMu :: [Tok] -> Maybe [Tok]
-> ttkMu (T Ty us : ts) = Just $ T Ty (munge tyTTK us) : munge ttkMu ts
-> ttkMu (B Crl (Sym ":" : us) : ts) = case parse pProxyRequest us of
->   Just (tm, ty) -> Just $ proxyRequest tm ty : munge ttkMu ts
->   _ -> Nothing
-> ttkMu (B Crl us : ts)
->   | piArg us = Just $ B Rnd (munge witMu us) : munge ttkMu ts
->   where
->     piArg xs | elem (Sym "=") xs = False
->     piArg xs | elem (Sym "::") xs = False
->     piArg _ = True
-> ttkMu _ = Nothing
 
 > pProxyRequest :: P Tok ([Tok], [Tok])
 > pProxyRequest = (,) <$> some (tok (/= Sym "::")) <* teq (Sym "::") <* spc
 >                     <*> pTag Ty (some (tok (/= Sym ":")) <* teq (Sym ":"))
 
-> witMu :: [Tok] -> Maybe [Tok]
-> witMu (B Sqr us : ts) = Just $ mkL (munge witMu us) : munge witMu ts where
->   mkL [] = Uid "SheSpecialWitNil"
->   mkL ts = case span (/= Sym ",") ts of
->     (ss, []) ->
->       B Rnd [B Rnd ss, Spc " ", Sym ":$%$%$%:", Spc " ", Uid "SheSpecialNil"]
->     (ss, _ : ts) ->
->       B Rnd [B Rnd ss, Spc " ", Sym ":$%$%$%:", Spc " ", mkL ts]
-> witMu (Uid s : ts) = Just $ Uid ("SheWit" ++ s) : munge witMu ts
-> witMu (Sym (':' : s) : ts) = Just $ Sym (":$%$%$%:" ++ s) : munge witMu ts
-> witMu _ = Nothing
+> proxyRequest :: [Tok] -> [Tok] -> Tok
+> proxyRequest tm ty = B Rnd [
+>       Lid "sheTypes", Spc " ", B Rnd [
+>         Uid "SheProxy", Spc " ", Sym "::", T Ty [Spc " ",
+>           Uid "SheProxy", Spc " ", B Rnd ty, Spc " ", B Rnd (munge exTTK tm)
+>       ]]]
 
 > exTTK :: [Tok] -> Maybe [Tok]
 > exTTK (B Sqr us : ts) = Just $ mkL (munge exTTK us) : munge exTTK ts where
@@ -152,6 +102,88 @@
 > exTTK (Sym (':' : s) : ts) = Just $ Sym (":$#$#$#:" ++ s) : munge exTTK ts
 > exTTK _ = Nothing
 
+> witMu :: [Tok] -> Maybe [Tok]
+> witMu (B Sqr us : ts) = Nothing -- not sure when we have square brackets in curly
+> witMu (Sym (':' : s) : ts) = Nothing -- Not implemented
+> witMu (Uid s : ts) = Just $ Uid (singPrefix ++ s) : munge witMu ts
+> witMu _ = Nothing
+
+> tyTTK :: [Tok] -> Maybe [Tok]
+> tyTTK (B Crl [T Ex (Sym ":" : us)] : ts) = case parse pProxyRequest us of
+>   Just (tm, ty) -> Just $
+>     [Uid "SingI", Spc " ", B Rnd (tm ++ (Spc " " : Sym "::" : Spc " " : []) ++ ty)]
+>     ++ munge tyTTK ts
+>   _ -> Nothing
+> tyTTK (Lid "pi" : ts) = pity <$> parse pTele ts where
+>   pity :: ([(String, [Tok])], [Tok]) -> [Tok]
+>   pity (xss, ts) =
+>     [KW "forall", Spc " "] ++
+>     (xss >>= \ (x, _) -> [Lid x, Spc " "]) ++
+>     [Sym ".", Spc " "] ++
+>     (xss >>= \ (x, ss) ->
+>       [Uid "Sing", Spc " ", B Rnd (Lid x : Spc " " : Sym "::" : Spc " " : B Rnd (munge tyTTK ss) : []),
+>        Spc " ", Sym "->", Spc " "]) ++
+>     munge tyTTK ts
+> tyTTK _ = Nothing
+
+> ttkMu :: [Tok] -> Maybe [Tok]
+> ttkMu (T Ty us : ts) = Just $ T Ty (munge tyTTK us) : munge ttkMu ts
+> ttkMu (B Rnd (Sym ":" : us) : ts) = case parse pProxyRequest us of
+>  -- Just (tm, ty) -> Just $ proxyRequest tm ty : munge ttkMu ts
+>   _ -> Nothing
+> ttkMu (B Crl us : ts)
+>   | piArg us = Just $ B Rnd (munge witMu us) : munge ttkMu ts
+>   where
+>     piArg xs | elem (Sym "=") xs = False
+>     piArg xs | elem (Sym "::") xs = False
+>     piArg _ = True
+> ttkMu _ = Nothing
+
+> pModule :: P Tok ()
+> pModule = teq (KW "module") *> spc
+>   *> uid *> spc *> teq (L "where" []) *> pEnd
+
+> singImport :: [[Tok]]
+> singImport =
+>   [(KW "import" :
+>     Spc " " :
+>     Uid "Data" :
+>     Sym "." :
+>     Uid "Singletons" :
+>     Sym "." :
+>     Uid "TH" :
+>     line :
+>     []
+>    )] where
+>   line = NL ("Dunno.lhs", 0)
+
+> addImport :: [[Tok]] -> [[Tok]]
+> addImport ls = addImport' (zip (map (parse pModule) ls) ls) where
+>   addImport' ((Nothing, l) : ls) = l : (addImport' ls)
+>   addImport' ((Just _, l) : (ll : lll : ls))  =
+>     l : (snd ll) : (snd lll) : singImport ++ (map snd ls)
+>   addImport' [] = []
+
+> addSing :: [[Tok]] -> [[Tok]]
+> addSing ls = map (\ l -> addSing' (parse pGADT l, l)) ls where
+>   addSing' (Just ((s, i), (cs, ds)), l) | elem "SheSingleton" ds =
+>     [Sym "$", B Rnd [Lid "singletons", Spc " ",
+>                      B Sqr (Sym "d": Sym "|" :
+>                             NL ("Dunno.lhs", 0) :
+>                             (indent l) ++
+>                             [NL ("Dunno.lhs", 0), Spc "  ", Sym "|"])],
+>      NL ("Dunno.lhs", 0)]
+>   addSing' (_, l) = l
+
+> indent :: [Tok] -> [Tok]
+> indent ts = (Spc "  ") : (indent' ts) where
+>   indent' (nl@(NL (f, l)) : ts) = nl : (Sym "  ") : (indent' ts)
+>   indent' (B b ss : ts) = B b (indent' ss) : indent' ts
+>   indent' (L k sss : ts) = L k (map (indent') sss) : indent' ts
+>   indent' (T t ss : ts) = T t (indent' ss) : indent' ts
+>   indent' (t : ts) = t : (indent' ts)
+>   indent' [] = []
+
 > typesToKinds :: [[Tok]] -> [[Tok]]
 > typesToKinds = map (munge ttkMu)
 
@@ -164,72 +196,16 @@
 >   , cIndices  :: [Tok]
 >   } deriving (Show)
 
-> sing :: ConTy -> ConTy
-> sing (ConTy
->   { cName     = c
->   , cForall   = xs
->   , cInst     = is
->   , cArgs     = as
->   , cFam      = ds
->   , cIndices  = ss
->   }) = ConTy
->   { cName     = "SheWit" ++ c
->   , cForall   = xs ++ (vs >>= (\v -> [Spc " ", Lid v]))
->   , cInst     = is 
-> --  , cInst     = cook is (zipWith constra as vs)
->   , cArgs     = zipWith singa as vs
->   , cFam      = [B Rnd ([Uid "SheSingleton", Spc " "] ++ ds ++ Spc " " : ss)]
->   , cIndices  = ss  ++ [Spc " ",
->                     B Rnd  (mkPref (sheTy c) :
->                            (vs >>= (\ v -> [Spc " ", Lid v])))]
->   } where
->   vs = zipWith (\ _ i -> "sha" ++ show i) as [0..]
->   singa ts v = [Uid "SheSingleton", Spc " ", B Rnd ts, Spc " ", Lid v]
->   constra ts v = [Uid "SheChecks", Spc " ", B Rnd ts, Spc " ", Lid v]
->   cook is [] | all isSpcT is = is
->   cook (B Rnd is : _) cs = cook is cs
->   cook is cs
->     | all isSpcT is = [B Rnd (intercalate [Sym ",", Spc " "] cs)]
->     | otherwise = [B Rnd (intercalate [Sym ",", Spc " "] (is : cs))]
-
-> conTyOut :: ConTy -> [Tok]
-> conTyOut (ConTy
->   { cName     = c
->   , cForall   = xs
->   , cInst     = is
->   , cArgs     = as
->   , cFam      = ds
->   , cIndices  = ss
->   }) = [Uid c, Spc " ", Sym "::", Spc " ", T Ty (
->        fao xs ++
->        cio is ++
->        (as >>= \ ts -> ts ++ [Spc " ", Sym "->", Spc " "]) ++
->        ds ++ Spc " " : ss)]
->   where
->     fao xs | all isSpcT xs = xs
->            | otherwise = [KW "forall", Spc " "] ++ xs ++ [Sym ".", Spc " "]
->     cio xs | all isSpcT xs = xs
->            | otherwise = xs ++ [Spc " ", Sym "=>", Spc " "]
-
-> pGConTy :: P Tok ConTy
-> pGConTy = (ConTy <$ spc <*> uid <* spc <* teq (Sym "::") <* spc) >>= \f ->
->           pTag Ty (f <$> pFA <*> pCI <*> many pARG <* spc <*> (((:[]). Uid) <$> uid)
->                    <*> pRest)
->   where
->     pFA = spc *> (
->             teq (KW "forall") *> some (tok (/= Sym ".")) <* teq (Sym ".")
->             <|> [] <$ spc)
->     pCI = some (tok (/= Sym "=>")) <* teq (Sym "=>")
->           <|> [] <$ spc
->     pARG = some (tok (/= Sym "->")) <* teq (Sym "->")
-
-> mkPref :: Tok -> Tok
-> mkPref t@(Sym _) = B Rnd [t]
-> mkPref t = t
-
-> sheTy :: String -> Tok
-> sheTy (':' : s) = Sym (":$#$#$#:" ++ s)
-> sheTy s = Uid ("SheTy" ++ s)
+> noDerSing :: [[Tok]] -> [[Tok]]
+> noDerSing = map (munge ndsMu) where
+>   ndsMu ts = case parse pDeriving ts of
+>     Just xs -> Just $ mkDer (filter (/= "SheSingleton") xs)
+>     _ -> Nothing
+>   mkDer [] = []
+>   mkDer [x] = [KW "deriving", Spc " ", Uid x]
+>   mkDer (x : xs) =
+>     [KW "deriving", Spc " ",
+>      B Rnd (Uid x : (xs >>= \x -> [Sym ",", Spc " ", Uid x]))]
 
 > pGADT :: P Tok ((String, Int), ([ConTy], [String]))
 > pGADT = (,)
@@ -245,83 +221,27 @@
 >              <|> pure []
 >     pDer = grok (parse pDeriving) next <* pRest <|> pure []
 
+> pGConTy :: P Tok ConTy
+> pGConTy = (ConTy <$ spc <*> uid <* spc <* teq (Sym "::") <* spc) >>= \f ->
+>           pTag Ty (f <$> pFA <*> pCI <*> many pARG <* spc <*> (((:[]). Uid) <$> uid)
+>                    <*> pRest)
+>   where
+>     pFA = spc *> (
+>             teq (KW "forall") *> some (tok (/= Sym ".")) <* teq (Sym ".")
+>             <|> [] <$ spc)
+>     pCI = some (tok (/= Sym "=>")) <* teq (Sym "=>")
+>           <|> [] <$ spc
+>     pARG = some (tok (/= Sym "->")) <* teq (Sym "->")
+
+
 > pDeriving :: P Tok [String]
 > pDeriving = teq (KW "deriving") *> spc *>
 >             (pure <$> uid <|>
 >             pBr Rnd (spc *> pSep (spc *> teq (Sym ",") *> spc) uid <* spc))
 
- singGrok :: [Tok] -> [[Tok]]
- singGrok ts = case parse pGADT ts of
-   Just ((s, i), (cs, ds)) | elem "SheSingleton" ds ->
-    let vs = [1..i] >>= \v -> [Spc " ", Lid ("x" ++ show i)] in
-    [[KW "type",
-      T Ty [Spc " ", KW "instance", Spc " ", Uid "SheSingleton", Spc " ",
-           B Rnd (Uid s : vs), Spc " "],
-      Sym "=",
-      T Ty (Spc " " : Uid ("SheSing" ++ s) : vs)],[NL ("Dunno.lhs",0)],
-     [KW "data", Spc " ", Uid ("SheSing" ++ s), Spc " ", Sym "::",
-      T Ki (concat (replicate i [Spc " ", Sym "*", Spc " ", Sym "->"]) ++
-           [Spc " ", Sym "*", Spc " ", Sym "->", Spc " ", Sym "*", Spc " "]),
-      L "where" (cs >>= \ c -> [[NL ("Dunno.lhs",0), Spc "    "], conTyOut (sing c)])],[NL ("Dunno.lhs",0)]] ++
-     (cs >>= \ c -> [checkI c, [NL ("Dunno.lhs",0)]])
-   _ -> []
-
 > singGrok :: [Tok] -> [[Tok]]
 > singGrok ts = case parse pGADT ts of
 >   Just ((s, i), (cs, ds)) | elem "SheSingleton" ds ->
->    let vs = [1..i] >>= \v -> [Spc " ", Lid ("x" ++ show i)] in
->     [[KW "data",
->       T Ty [Spc " ", KW "instance", Spc " ", Uid "SheSingleton", Spc " ",
->            B Rnd (Uid s : vs), Spc " ", Uid "dummy", Spc " ",
->       L "where" (cs >>= \ c -> [[NL ("Dunno.lhs",0), Spc "    "], conTyOut (sing c)])]],
->      [NL ("Dunno.lhs",0)]] ++
->      (cs >>= \ c -> [checkI c, [NL ("Dunno.lhs",0)]])
+>     [[Sym "$", B Rnd ( Lid "genSingletons" : Spc " " : B Sqr (Sym "''" : Uid s : []) : [] )],
+>     [NL ("Dunno.lhs", 0)]]
 >   _ -> []
-
-> checkI :: ConTy -> [Tok]
-> checkI  (ConTy
->   { cName     = c
->   , cForall   = xs
->   , cInst     = is
->   , cArgs     = as
->   , cFam      = ds
->   , cIndices  = ss
->   }) =
->   [KW "instance",
->    T Ty (Spc " " : prems ais ++
->     [Uid "SheChecks", Spc " ", B Rnd (ds ++ Spc " " : ss), Spc " ",
->      B Rnd (mkPref (sheTy c) : (ais >>= (\ (_, v) -> [Spc " ", Lid v]))),
->      Spc " "]),
->    L "where" [[Spc " "],
->      [Lid "sheTypes", Spc " ", Lid "_", Spc " ", Sym "=", Spc " ",
->       Uid ("SheWit" ++ c)] ++ (ais >>= poxy)
->      ]
->   ]
->   where
->     ais = zipWith (\ty i -> (ty, "sha" ++ show i)) as [0..]
->     prems [] = []
->     prems [tyv] = cnstr tyv ++ [Spc " " , Sym "=>", Spc " "]
->     prems (tyv : tyvs) =
->       [B Rnd (cnstr tyv ++
->               (tyvs >>= \tyv -> [Sym ",", Spc " "] ++ cnstr tyv)),
->        Spc " " , Sym "=>", Spc " "]
->     cnstr (ty, v) = [Uid "SheChecks", Spc " ", B Rnd ty, Spc " ", Lid v]
->     poxy (ty, v) = [Spc " ", proxyRequest [Lid v] ty]
-
-> proxyRequest :: [Tok] -> [Tok] -> Tok
-> proxyRequest tm ty = B Rnd [
->       Lid "sheTypes", Spc " ", B Rnd [
->         Uid "SheProxy", Spc " ", Sym "::", T Ty [Spc " ",
->           Uid "SheProxy", Spc " ", B Rnd ty, Spc " ", B Rnd (munge exTTK tm)
->       ]]]
-
-> noDerSing :: [[Tok]] -> [[Tok]]
-> noDerSing = map (munge ndsMu) where
->   ndsMu ts = case parse pDeriving ts of
->     Just xs -> Just $ mkDer (filter (/= "SheSingleton") xs)
->     _ -> Nothing
->   mkDer [] = []
->   mkDer [x] = [KW "deriving", Spc " ", Uid x]
->   mkDer (x : xs) =
->     [KW "deriving", Spc " ",
->      B Rnd (Uid x : (xs >>= \x -> [Sym ",", Spc " ", Uid x]))]
