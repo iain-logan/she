@@ -1,6 +1,7 @@
 > module TypesToKinds where
 
 > import Data.List
+> import Data.Maybe
 > import Control.Applicative
 
 > import HaLay
@@ -71,13 +72,17 @@
 >      <|> (1 +) <$ teq (Sym "->") <*> pArity
 >      <|> next *> pArity
 
-> pTele :: P Tok ([(String, [Tok])], [Tok])
-> pTele = (,)  <$> some (spc *> pBr Rnd piB) <* spc <* teq (Sym "->")
+> piB :: P Tok (String, [Tok])
+> piB = (,) <$ spc <*> lid <* spc <* teq (Sym "::") <* spc <*> pRest
+
+> pPiExp :: P Tok ([(String, [Tok])], [Tok])
+> pPiExp = (,)  <$> some (spc *> pBr Rnd piB) <* spc <* teq (Sym "->")
 >              <*> pRest
 >              where
->    piB :: P Tok (String, [Tok])
->    piB = (,) <$ spc <*> lid <* spc <* teq (Sym "::") <* spc <*> pRest
 
+> pPiImp :: P Tok ([(String, [Tok])], [Tok])
+> pPiImp = (,)  <$> some (spc *> pBr Rnd piB) <* spc <* teq (Sym ".")
+>              <*> pRest
 
 > pProxyRequest :: P Tok ([Tok], [Tok])
 > pProxyRequest = (,) <$> some (tok (/= Sym "::")) <* teq (Sym "::") <* spc
@@ -114,15 +119,29 @@
 >     [Uid "SingI", Spc " ", B Rnd (tm ++ (Spc " " : Sym "::" : Spc " " : []) ++ ty)]
 >     ++ munge tyTTK ts
 >   _ -> Nothing
-> tyTTK (Lid "pi" : ts) = pity <$> parse pTele ts where
->   pity :: ([(String, [Tok])], [Tok]) -> [Tok]
->   pity (xss, ts) =
+> tyTTK (Lid "pi" : ts) = case parse pPiExp ts of
+>   Just pr -> Just (pityex pr)
+>   Nothing -> case parse pPiImp ts of
+>     Just pr -> Just (pityim pr)
+>     Nothing -> Nothing
+>   where
+>   pityex :: ([(String, [Tok])], [Tok]) -> [Tok]
+>   pityex (xss, ts) =
 >     [KW "forall", Spc " "] ++
 >     (xss >>= \ (x, _) -> [Lid x, Spc " "]) ++
 >     [Sym ".", Spc " "] ++
 >     (xss >>= \ (x, ss) ->
 >       [Uid "Sing", Spc " ", B Rnd (Lid x : Spc " " : Sym "::" : Spc " " : B Rnd (munge tyTTK ss) : []),
 >        Spc " ", Sym "->", Spc " "]) ++
+>     munge tyTTK ts
+>   pityim :: ([(String, [Tok])], [Tok]) -> [Tok]
+>   pityim (xss, ts) =
+>     [KW "forall", Spc " "] ++
+>     (xss >>= \ (x, _) -> [Lid x, Spc " "]) ++
+>     [Sym ".", Spc " "] ++
+>     (xss >>= \ (x, ss) ->
+>       [Uid "SingI", Spc " ", B Rnd (Lid x : Spc " " : Sym "::" : Spc " " : B Rnd (munge tyTTK ss) : []),
+>        Spc " ", Sym "=>", Spc " "]) ++
 >     munge tyTTK ts
 > tyTTK _ = Nothing
 
@@ -174,6 +193,14 @@
 >                             [NL ("Dunno.lhs", 0), Spc "  ", Sym "|"])],
 >      NL ("Dunno.lhs", 0)]
 >   addSing' (_, l) = l
+
+> addSingAlone :: [[Tok]] -> [[Tok]]
+> addSingAlone ls = map (\ l -> fromMaybe l ((genSing) <$> (parse pSingAlone l))) ls where
+>   genSing :: String -> [Tok]
+>   genSing s = [Sym "$", B Rnd ([Lid "genSingletons", Spc " ", B Sqr (Sym "''" : Uid s : [])])]
+
+> pSingAlone :: P Tok String
+> pSingAlone = spc *> teq (KW "deriving") *> spc *> teq (KW "instance") *> pTag Ty ( spc *> teq (Uid "SheSingleton") *> spc *> uid <* spc) <* pEnd
 
 > indent :: [Tok] -> [Tok]
 > indent ts = (Spc "  ") : (indent' ts) where
