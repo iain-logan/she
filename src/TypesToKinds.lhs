@@ -109,8 +109,8 @@
 
 > witMu :: [Tok] -> Maybe [Tok]
 > witMu (B Sqr us : ts) = Nothing -- not sure when we have square brackets in curly
-> witMu (Sym (':' : s) : ts) = Nothing -- Not implemented
 > witMu (Uid s : ts) = Just $ Uid (singPrefix ++ s) : munge witMu ts
+> witMu (Sym (':' : s) : ts) = Just $ Sym (':' : '%' : s) : munge witMu ts
 > witMu _ = Nothing
 
 > tyTTK :: [Tok] -> Maybe [Tok]
