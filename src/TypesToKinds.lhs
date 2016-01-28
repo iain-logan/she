@@ -164,24 +164,23 @@
 
 > singImport :: [[Tok]]
 > singImport =
->   [(KW "import" :
->     Spc " " :
->     Uid "Data" :
->     Sym "." :
->     Uid "Singletons" :
->     Sym "." :
->     Uid "TH" :
->     line :
->     []
->    )] where
+>   [[KW "import",
+>     Spc " ",
+>     Uid "Data",
+>     Sym ".",
+>     Uid "Singletons",
+>     Sym ".",
+>     Uid "TH"],
+>     [],
+>     [line]
+>    ] where
 >   line = NL ("Dunno.lhs", 0)
 
 > addImport :: [[Tok]] -> [[Tok]]
-> addImport ls = addImport' (zip (map (parse pModule) ls) ls) where
->   addImport' ((Nothing, l) : ls) = l : (addImport' ls)
->   addImport' ((Just _, l) : (ll : lll : ls))  =
->     l : (snd ll) : (snd lll) : singImport ++ (map snd ls)
->   addImport' [] = []
+> addImport ls = case span (\ (p, _) -> Nothing == p) (map (\ l -> (parse pModule l, l)) ls) of
+>   (bls, (il : (_, []) : (_, nl@(NL (f, l) : nls)) : als)) ->
+>     (map (snd) bls) ++ (snd il : [] : nl : ((redent nl singImport) ++ (map (snd) als)))
+>   _ -> ls
 
 > addSing :: [[Tok]] -> [[Tok]]
 > addSing ls = map (\ l -> addSing' (parse pGADT l, l)) ls where
@@ -200,7 +199,8 @@
 >   genSing s = [Sym "$", B Rnd ([Lid "genSingletons", Spc " ", B Sqr (Sym "''" : Uid s : [])])]
 
 > pSingAlone :: P Tok String
-> pSingAlone = spc *> teq (KW "deriving") *> spc *> teq (KW "instance") *> pTag Ty ( spc *> teq (Uid "SheSingleton") *> spc *> uid <* spc) <* pEnd
+> pSingAlone = spc *> teq (KW "deriving") *> spc *> teq (KW "instance") *>
+>   pTag Ty ( spc *> teq (Uid "SheSingleton") *> spc *> uid <* spc) <* pEnd
 
 > indent :: [Tok] -> [Tok]
 > indent ts = (Spc "  ") : (indent' ts) where
@@ -265,10 +265,3 @@
 > pDeriving = teq (KW "deriving") *> spc *>
 >             (pure <$> uid <|>
 >             pBr Rnd (spc *> pSep (spc *> teq (Sym ",") *> spc) uid <* spc))
-
-> singGrok :: [Tok] -> [[Tok]]
-> singGrok ts = case parse pGADT ts of
->   Just ((s, i), (cs, ds)) | elem "SheSingleton" ds ->
->     [[Sym "$", B Rnd ( Lid "genSingletons" : Spc " " : B Sqr (Sym "''" : Uid s : []) : [] )],
->     [NL ("Dunno.lhs", 0)]]
->   _ -> []
