@@ -77,12 +77,15 @@
 
 > pPiExp :: P Tok ([(String, [Tok])], [Tok])
 > pPiExp = (,)  <$> some (spc *> pBr Rnd piB) <* spc <* teq (Sym "->")
->              <*> pRest
->              where
+>               <*> pRest
 
 > pPiImp :: P Tok ([(String, [Tok])], [Tok])
 > pPiImp = (,)  <$> some (spc *> pBr Rnd piB) <* spc <* teq (Sym ".")
->              <*> pRest
+>               <*> pRest
+
+> pVisForall :: P Tok ([(String, [Tok])], [Tok])
+> pVisForall = (,) <$> some (spc *> pBr Rnd piB) <* spc <* teq (Sym "->")
+>                  <*> pRest
 
 > pProxyRequest :: P Tok ([Tok], [Tok])
 > pProxyRequest = (,) <$> some (tok (/= Sym "::")) <* teq (Sym "::") <* spc
@@ -143,6 +146,16 @@
 >       [Uid "SingI", Spc " ", B Rnd (Lid x : Spc " " : Sym "::" : Spc " " : B Rnd (munge tyTTK ss) : []),
 >        Spc " ", Sym "=>", Spc " "]) ++
 >     munge tyTTK ts
+> tyTTK (KW "forall" : ts) = forvis <$> parse pVisForall ts where
+>   forvis :: ([(String, [Tok])], [Tok]) -> [Tok]
+>   forvis (xss, ts) =
+>     [KW "forall", Spc " "] ++
+>     (xss >>= \ (x, _) -> [Lid x, Spc " "]) ++
+>     [Sym ".", Spc " "] ++
+>     (xss >>= \ (x, ss) ->
+>       [Uid "Proxy", Spc " ", B Rnd (Lid x : Spc " " : Sym "::" : Spc " " : B Rnd (munge tyTTK ss) : []),
+>        Spc " ", Sym "->", Spc " "]) ++
+>     munge tyTTK ts
 > tyTTK _ = Nothing
 
 > ttkMu :: [Tok] -> Maybe [Tok]
@@ -164,17 +177,18 @@
 
 > singImport :: [[Tok]]
 > singImport =
->   [[KW "import",
->     Spc " ",
->     Uid "Data",
->     Sym ".",
->     Uid "Singletons",
->     Sym ".",
->     Uid "TH"],
->     [],
->     [line]
->    ] where
->   line = NL ("Dunno.lhs", 0)
+>   imp [Uid "Data",
+>      Sym ".",
+>      Uid "Singletons",
+>      Sym ".",
+>      Uid "TH"] ++
+>   imp [Uid "Data",
+>      Sym ".",
+>      Uid "Proxy"] where
+>   line = [NL ("Dunno.lhs", 0)]
+>   imp :: [Tok] -> [[Tok]]
+>   imp xs = (KW "import": Spc " " : xs):
+>     [] : line : []
 
 > addImport :: [[Tok]] -> [[Tok]]
 > addImport ls = case span (\ (p, _) -> Nothing == p) (map (\ l -> (parse pModule l, l)) ls) of
