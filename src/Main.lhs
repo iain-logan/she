@@ -29,7 +29,8 @@
 >       hs2'5 = deBruijn hs2
 >       hs2'75 = map idiomBrackets hs2'5
 >       (hs3'5, herso2) = superclass nl hersi0 hs2'75
->       hs5 = addImport $ typesToKinds $ noDerSing $ addSing $ addSingAlone hs3'5
+>       hs4 = overImp hs3'5
+>       hs5 = addImport $ typesToKinds $ noDerSing $ addSing $ addSingAlone hs4
 >   in  (inh ++
 >        [[NL (mo ++ ".hers", 0)],
 >         [KW "module", Spc " ", Uid mo, Spc " ", L "where"

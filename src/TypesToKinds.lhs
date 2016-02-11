@@ -7,8 +7,11 @@
 > import HaLay
 > import Parsley
 
-> singPrefix :: String
-> singPrefix = "S"
+> singPre :: String
+> singPre = "S"
+
+> singInfPre :: String
+> singInfPre = "%"
 
 > dataGrok :: [Tok] -> [[Tok]]
 > dataGrok cs@(KW "newtype" : T Ty _ : ds)
@@ -90,38 +93,17 @@
 > pProxyRequest :: P Tok ([Tok], [Tok])
 > pProxyRequest = (,) <$> some (tok (/= Sym "::")) <* teq (Sym "::") <* spc
 >                     <*> pTag Ty (some (tok (/= Sym ":")) <* teq (Sym ":"))
-
+                     
 > proxyRequest :: [Tok] -> [Tok] -> Tok
-> proxyRequest tm ty = B Rnd [
->       Lid "sheTypes", Spc " ", B Rnd [
->         Uid "SheProxy", Spc " ", Sym "::", T Ty [Spc " ",
->           Uid "SheProxy", Spc " ", B Rnd ty, Spc " ", B Rnd (munge exTTK tm)
->       ]]]
-
-> exTTK :: [Tok] -> Maybe [Tok]
-> exTTK (B Sqr us : ts) = Just $ mkL (munge exTTK us) : munge exTTK ts where
->   mkL [] = Uid "SheSpecialNil"
->   mkL ts = case span (/= Sym ",") ts of
->     (ss, []) ->
->       B Rnd [B Rnd ss, Spc " ", Sym ":$#$#$#:", Spc " ", Uid "SheSpecialNil"]
->     (ss, _ : ts) ->
->       B Rnd [B Rnd ss, Spc " ", Sym ":$#$#$#:", Spc " ", mkL ts]
-> exTTK (Uid s : ts) = Just $ Uid ("SheTy" ++ s) : munge exTTK ts
-> exTTK (Sym (':' : s) : ts) = Just $ Sym (":$#$#$#:" ++ s) : munge exTTK ts
-> exTTK _ = Nothing
+> proxyRequest tm ty = B Rnd [Uid "Proxy"]
 
 > witMu :: [Tok] -> Maybe [Tok]
 > witMu (B Sqr us : ts) = Nothing -- not sure when we have square brackets in curly
-> witMu (Uid s : ts) = Just $ Uid (singPrefix ++ s) : munge witMu ts
-> witMu (Sym (':' : s) : ts) = Just $ Sym (':' : '%' : s) : munge witMu ts
+> witMu (Uid s : ts) = Just $ Uid (singPre ++ s) : munge witMu ts
+> witMu (Sym (':' : s) : ts) = Just $ Sym (':' : singInfPre ++ s) : munge witMu ts
 > witMu _ = Nothing
 
 > tyTTK :: [Tok] -> Maybe [Tok]
-> tyTTK (B Crl [T Ex (Sym ":" : us)] : ts) = case parse pProxyRequest us of
->   Just (tm, ty) -> Just $
->     [Uid "SingI", Spc " ", B Rnd (tm ++ (Spc " " : Sym "::" : Spc " " : []) ++ ty)]
->     ++ munge tyTTK ts
->   _ -> Nothing
 > tyTTK (Lid "pi" : ts) = case parse pPiExp ts of
 >   Just pr -> Just (pityex pr)
 >   Nothing -> case parse pPiImp ts of
@@ -161,7 +143,7 @@
 > ttkMu :: [Tok] -> Maybe [Tok]
 > ttkMu (T Ty us : ts) = Just $ T Ty (munge tyTTK us) : munge ttkMu ts
 > ttkMu (B Rnd (Sym ":" : us) : ts) = case parse pProxyRequest us of
->  -- Just (tm, ty) -> Just $ proxyRequest tm ty : munge ttkMu ts
+>   Just (tm, ty) -> Just $ proxyRequest tm ty : munge ttkMu ts
 >   _ -> Nothing
 > ttkMu (B Crl us : ts)
 >   | piArg us = Just $ B Rnd (munge witMu us) : munge ttkMu ts
@@ -274,8 +256,84 @@
 >           <|> [] <$ spc
 >     pARG = some (tok (/= Sym "->")) <* teq (Sym "->")
 
-
 > pDeriving :: P Tok [String]
 > pDeriving = teq (KW "deriving") *> spc *>
 >             (pure <$> uid <|>
 >             pBr Rnd (spc *> pSep (spc *> teq (Sym ",") *> spc) uid <* spc))
+
+> workerPrefix :: String
+> workerPrefix = "toTheExplicitWorker"
+
+> data ImpFunct = ImpFunct
+>   { name :: String
+>   , alls :: [[Tok]]
+>   , imps :: [[Tok]]
+>   , args :: [[Tok]]
+>   , rtyp :: [Tok]
+>   } deriving (Show)
+
+> pImpFunc :: P Tok (ImpFunct)
+> pImpFunc = (ImpFunct <$> lid <* spc <* teq (Sym "::") <* spc) >>= \f ->
+>            pTag Ty (f <$> many pFA <*> some pImpArg <*> many pARG <*> pRest)
+>   where
+>     pFA = (\ ts -> KW "forall" : ts ++ [Sym "."]) <$>
+>           (spc *> teq (KW "forall") *> some (tok (/= Sym ".")) <* teq (Sym "."))
+>     pImpArg = (Lid "pi" :) <$>
+>               (spc *> teq (Lid "pi") *> some (tok (/= Sym ".")) <* teq (Sym "."))
+>     pARG = (some (tok (/= Sym "->"))) <* teq (Sym "->")
+
+> genWorkerCall :: ImpFunct -> [Tok]
+> genWorkerCall (ImpFunct name foralls imps args rtyp) =
+>   [Lid name, Spc " "] ++ namedArgs ++ [Spc " ", Sym "=", Spc " ", Lid (workerPrefix ++ name), Spc " "] ++
+>    foldr (++) [] (map (\ _ -> [Lid "sing", Spc " "]) imps) ++
+>    namedArgs ++ [Spc " "] where
+>      namedArgs = intercalate ([Spc " "]) [ [Lid (replicate 10 l)] | l <- take (length args) ['a'..] ]
+>   
+
+> genWorker :: ImpFunct -> [Tok]
+> genWorker (ImpFunct name foralls imps args rtyp) =
+>   [Lid (workerPrefix ++ name), Spc " ", Sym "::", Spc " "] ++
+>   [T Ty (foldl' (\ a b -> a ++ b ++ [Spc " "]) [] foralls ++
+>   foldl' (\ a b -> a ++ b ++ [Spc " "]) [] (map impsToExp imps) ++
+>   foldl' (\ a b -> a ++ b ++ [Spc " ", Sym "->", Spc " "]) [] args ++
+>   rtyp)] where
+>     impsToExp [] = [Spc " ", Sym "->"]
+>     impsToExp (t : ts)  = t : (impsToExp ts)
+
+> impToWork :: [Tok] -> [Tok]
+> impToWork (B b ss : ts)  = B b (impToWork ss) : impToWork ts
+> impToWork (L k sss : ts) = L k (map (impToWork) sss) : impToWork ts
+> impToWork (T t ss : ts)  = T t (impToWork ss) : impToWork ts
+> impToWork (Sym "@" : ts@(B Crl bs : tss)) = impToWork ts
+> impToWork (t : ts) = t : (impToWork ts)
+> impToWork [] = []
+
+> pRedirectImp :: P Tok [Tok]
+> pRedirectImp = spc *> teq ( Sym "@") *> pBr Crl pRest *> pRest
+
+> ovImpTExp :: [Tok] -> Maybe [Tok]
+> ovImpTExp (Lid fname : ts) = case parse pRedirectImp ts of
+>   Just _ -> Just $ Lid (workerPrefix ++ fname) : (munge ovImpTExp ts)
+>   _ -> Nothing
+> ovImpTExp ts = Nothing
+
+> addWorkers :: [[Tok]] -> [[Tok]]
+> addWorkers (ts : [] : nl@(NL f : s): tss) = case parse pImpFunc ts of
+>          Just impf -> (apToL ts) : [] : nl : (genWorkerCall impf) :
+>            [] : nl : (genWorker impf) : [] : nl : addWorkers tss
+>          Nothing -> (apToL ts) : [] : nl : addWorkers tss where
+> addWorkers [] = []
+> addWorkers (ts : tss) = apToL ts : addWorkers tss
+
+> apToL :: [Tok] -> [Tok]
+> apToL [] = []
+> apToL (B b ss : ts) = B b (apToL ss) : apToL ts
+> apToL (L k sss : ts) = L k (addWorkers sss) : apToL ts
+> apToL (T t ss : ts) = T t (apToL ss) : apToL ts
+> apToL (t : ts) = t : apToL ts
+
+> redirectToWorker :: [[Tok]] -> [[Tok]]
+> redirectToWorker tss = map impToWork $ map (munge ovImpTExp) tss
+
+> overImp :: [[Tok]] -> [[Tok]]
+> overImp tss = redirectToWorker $ addWorkers tss
