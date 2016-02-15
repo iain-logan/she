@@ -28,16 +28,16 @@
 >       hs2 = piggle higs hs1
 >       hs2'5 = deBruijn hs2
 >       hs2'75 = map idiomBrackets hs2'5
->       (hs3'5, herso2) = superclass nl hersi0 hs2'75
->       hs4 = overImp hs3'5
+>       hs4 = overImp hs2'75
 >       hs5 = addImport $ typesToKinds $ noDerSing $ addSing $ addSingAlone hs4
+>       (hs6, herso2) = superclass nl hersi0 hs5
 >   in  (inh ++
 >        [[NL (mo ++ ".hers", 0)],
 >         [KW "module", Spc " ", Uid mo, Spc " ", L "where"
 >           (redent [NL (mo ++ ".hers", 0), Spc "  "]
 >            (herso0 ++ [[NL (mo ++ ".hers", 0)]]
 >                    ++ [[NL (mo ++ ".hers", 0)]] ++ herso2))]]
->       , hs5)
+>       , hs6)
 
 > hsAndHers :: String -> FilePath -> String -> IO (String, String)
 > hsAndHers f mo s = do
