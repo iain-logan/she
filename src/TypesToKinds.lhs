@@ -75,18 +75,18 @@
 >      <|> (1 +) <$ teq (Sym "->") <*> pArity
 >      <|> next *> pArity
 
-> piB :: P Tok (String, [Tok])
-> piB = (,) <$ spc <*> lid <* spc <* teq (Sym "::") <* spc <*> pRest
+> piB :: P Tok (String , Maybe [Tok])
+> piB = (,) <$ spc <*> lid <* spc <*> pOpt (teq (Sym "::") *> spc *> pRest)
 
-> pPiExp :: P Tok ([(String, [Tok])], [Tok])
+> pPiExp :: P Tok ([(String, Maybe [Tok])], [Tok])
 > pPiExp = (,)  <$> some (spc *> pBr Rnd piB) <* spc <* teq (Sym "->")
 >               <*> pRest
 
-> pPiImp :: P Tok ([(String, [Tok])], [Tok])
+> pPiImp :: P Tok ([(String, Maybe [Tok])], [Tok])
 > pPiImp = (,)  <$> some (spc *> pBr Rnd piB) <* spc <* teq (Sym ".")
 >               <*> pRest
 
-> pVisForall :: P Tok ([(String, [Tok])], [Tok])
+> pVisForall :: P Tok ([(String, Maybe [Tok])], [Tok])
 > pVisForall = (,) <$> some (spc *> pBr Rnd piB) <* spc <* teq (Sym "->")
 >                  <*> pRest
 
@@ -110,32 +110,35 @@
 >     Just pr -> Just (pityim pr)
 >     Nothing -> Nothing
 >   where
->   pityex :: ([(String, [Tok])], [Tok]) -> [Tok]
+>   pityex :: ([(String, Maybe [Tok])], [Tok]) -> [Tok]
 >   pityex (xss, ts) =
 >     [KW "forall", Spc " "] ++
 >     (xss >>= \ (x, _) -> [Lid x, Spc " "]) ++
 >     [Sym ".", Spc " "] ++
 >     (xss >>= \ (x, ss) ->
->       [Uid "Sing", Spc " ", B Rnd (Lid x : Spc " " : Sym "::" : Spc " " : B Rnd (munge tyTTK ss) : []),
+>       [Uid "Sing", Spc " ",
+>        B Rnd (Lid x : Spc " " : (maybe [] (\ ss -> Sym "::" : Spc " " : B Rnd (munge tyTTK ss) : []) ss)),
 >        Spc " ", Sym "->", Spc " "]) ++
 >     munge tyTTK ts
->   pityim :: ([(String, [Tok])], [Tok]) -> [Tok]
+>   pityim :: ([(String, Maybe [Tok])], [Tok]) -> [Tok]
 >   pityim (xss, ts) =
 >     [KW "forall", Spc " "] ++
 >     (xss >>= \ (x, _) -> [Lid x, Spc " "]) ++
 >     [Sym ".", Spc " "] ++
 >     (xss >>= \ (x, ss) ->
->       [Uid "SingI", Spc " ", B Rnd (Lid x : Spc " " : Sym "::" : Spc " " : B Rnd (munge tyTTK ss) : []),
+>       [Uid "SingI", Spc " ",
+>        B Rnd (Lid x : Spc " " : (maybe [] (\ ss -> Sym "::" : Spc " " : B Rnd (munge tyTTK ss) : []) ss)),
 >        Spc " ", Sym "=>", Spc " "]) ++
 >     munge tyTTK ts
 > tyTTK (KW "forall" : ts) = forvis <$> parse pVisForall ts where
->   forvis :: ([(String, [Tok])], [Tok]) -> [Tok]
+>   forvis :: ([(String, Maybe [Tok])], [Tok]) -> [Tok]
 >   forvis (xss, ts) =
 >     [KW "forall", Spc " "] ++
 >     (xss >>= \ (x, _) -> [Lid x, Spc " "]) ++
 >     [Sym ".", Spc " "] ++
 >     (xss >>= \ (x, ss) ->
->       [Uid "Proxy", Spc " ", B Rnd (Lid x : Spc " " : Sym "::" : Spc " " : B Rnd (munge tyTTK ss) : []),
+>       [Uid "Proxy", Spc " ",
+>        B Rnd (Lid x : Spc " " : (maybe [] (\ ss -> Sym "::" : Spc " " : B Rnd (munge tyTTK ss) : []) ss)),
 >        Spc " ", Sym "->", Spc " "]) ++
 >     munge tyTTK ts
 > tyTTK _ = Nothing
