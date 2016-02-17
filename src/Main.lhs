@@ -9,6 +9,7 @@
 > import Debug.Trace
 
 > import HaLay
+> import Pragma
 > import Imports
 > import Aspect
 > import DeBruijn
@@ -17,20 +18,28 @@
 > import Superclass
 > import Parsley
 
-> sheGoes :: FilePath -> [[Tok]] -> [[Tok]] -> ([[Tok]], [[Tok]])
-> sheGoes mo inh hs0 =
->   let nl = dental hs0
->       hersi0 = getGuts inh
->       (higs0, _) = foldMap higgle hersi0
->       (higs1, hs1) = foldMap higgle hs0
->       higs = higs0 ++ higs1
->       herso0 = higs1 >>= higOut
->       hs2 = piggle higs hs1
->       hs2'5 = deBruijn hs2
->       hs2'75 = map idiomBrackets hs2'5
->       hs4 = overImp hs2'75
->       hs5 = addImport $ typesToKinds $ noDerSing $ addSing $ addSingAlone hs4
->       (hs6, herso2) = superclass nl hersi0 hs5
+> aspect :: [[Tok]] -> [[Tok]] -> ([[Tok]], [[Tok]], [[Tok]])
+> aspect inh hs0 = (hersi0, herso0, hs2) where
+>   hersi0 = getGuts inh
+>   (higs0, _) = foldMap higgle hersi0
+>   (higs1, hs1) = foldMap higgle hs0
+>   higs = higs0 ++ higs1
+>   herso0 = higs1 >>= higOut
+>   hs2 = piggle higs hs1
+
+> sheGoes :: FilePath -> [[Tok]] -> [[Tok]] -> [FeatureReq] -> ([[Tok]], [[Tok]])
+> sheGoes mo inh hs0 feats =
+>   let (hersi0, herso0, hs2) =
+>                if elem Aspect        $ reqFeat feats then aspect inh hs0 else ([], [], hs0)
+>       hs2'5  = if elem DeBruijn      $ reqFeat feats then deBruijn hs2 else hs2
+>       hs2'75 = if elem IdiomBrackets $ reqFeat feats then map idiomBrackets hs2'5 else hs2'5
+>       hs4    = if elem OverrideImps  $ reqFeat feats then overImp hs2'75 else hs2'75
+>       hs5    = if elem TypesToKinds  $ reqFeat feats then
+>                   addImport $ typesToKinds $ noDerSing $ addSing $ addSingAlone hs4
+>                else hs4
+>       (hs6, herso2) = if elem Superclass $ reqFeat feats then
+>                         superclass (dental hs0) hersi0 hs5
+>                       else (hs5, [])
 >   in  (inh ++
 >        [[NL (mo ++ ".hers", 0)],
 >         [KW "module", Spc " ", Uid mo, Spc " ", L "where"
@@ -42,9 +51,16 @@
 > hsAndHers :: String -> FilePath -> String -> IO (String, String)
 > hsAndHers f mo s = do
 >   let ihs = ready f s
+>   let feats = case features ihs of
+>         [] -> allFeats
+>         feats -> feats
 >   pcs <- storySoFar ihs
->   let (hers, hs) = sheGoes mo pcs ihs
->   return (tokssOut hs, tokssOut hers)
+>   if (not $ foldr (\ fr suc -> (reqSat fr $ reqFeat feats) && suc) True feats) then
+>     fail $ "Could not satisfy all feature requirments." ++
+>            "An enabled feature depends on a disabled feature"
+>     else do
+>       let (hers, hs) = sheGoes mo pcs (noShePrag ihs) feats
+>       return (tokssOut hs, tokssOut hers)
 
 Parameters
 x filepath of the original source file (used to create .hers file)

@@ -10,29 +10,46 @@
 > data Feature = Aspect | DeBruijn | IdiomBrackets | OverrideImps | TypesToKinds | Superclass
 >   deriving (Show, Eq)
 
-> toFeat :: String -> Maybe Feature
-> toFeat "Aspect" = Just Aspect
-> toFeat "DeBruijn" = Just Aspect
-> toFeat "IdiomBrackets" = Just IdiomBrackets
-> toFeat "OverrideImps" = Just OverrideImps
-> toFeat "TypesToKinds" = Just TypesToKinds
-> toFeat "Superclass" = Just Superclass
-> toFeat _ = Nothing
+> data FeatureReq = FeatReq Feature [Feature]
+>   deriving (Show, Eq)
 
-> pPragma :: P Tok [Feature]
+> reqFeat :: [FeatureReq] -> [Feature]
+> reqFeat ((FeatReq feat _) : frs) = feat : (reqFeat frs)
+> reqFeat [] = []
+
+> reqSat :: FeatureReq -> [Feature] -> Bool
+> reqSat (FeatReq feat (r : reqs)) feats = (elem r feats) && (reqSat (FeatReq feat reqs) feats)
+> reqSat (FeatReq _ []) _ = True
+
+> toFeat :: String -> Maybe FeatureReq
+> toFeat f
+>   | f == show Aspect        = Just $ FeatReq Aspect []
+>   | f == show DeBruijn      = Just $ FeatReq DeBruijn []
+>   | f == show IdiomBrackets = Just $ FeatReq IdiomBrackets []
+>   | f == show OverrideImps  = Just $ FeatReq OverrideImps [TypesToKinds]
+>   | f == show TypesToKinds  = Just $ FeatReq TypesToKinds []
+>   | f == show Superclass    = Just $ FeatReq Superclass [Aspect]
+>   | otherwise = Nothing
+
+> allFeats :: [FeatureReq]
+> allFeats = mapMaybe make [Aspect, DeBruijn, IdiomBrackets,
+>                           OverrideImps, TypesToKinds, Superclass] where
+>   make feat = toFeat (show feat)
+
+> pPragma :: P Tok [FeatureReq]
 > pPragma = (mapMaybe toFeat) <$> (spc *> teq (Uid "SHE") *> spc *> feat <* spc <* pRest) where
 >    feat = (pSep (spc *> teq (Sym ",") *> spc) uid) <|> pure <$> uid
 
-> features :: [[Tok]] -> [Feature]
+> features :: [[Tok]] -> [FeatureReq]
 > features =  nub . fromLines
 
-> fromLines :: [[Tok]] -> [Feature]
+> fromLines :: [[Tok]] -> [FeatureReq]
 > fromLines (t : ts) = case fromLine t of
 >   Just feat -> feat ++ fromLines ts
 >   Nothing -> fromLines ts
 > fromLines [] = []
 
-> fromLine :: [Tok] -> Maybe [Feature]
+> fromLine :: [Tok] -> Maybe [FeatureReq]
 > fromLine (Com ('{' : '-' : '#' : pragma) : ts) = do
 >   case listToMaybe [foldr (++) [] $ ready "notMattering" pragma] >>= (parse pPragma) of
 >     Just feats -> case fromLine ts of
@@ -41,3 +58,13 @@
 >     Nothing -> fromLine ts
 > fromLine (t : ts) = fromLine ts
 > fromLine [] = Nothing
+
+> noShePrag :: [[Tok]] -> [[Tok]]
+> noShePrag [] = []
+> noShePrag (ts : tss) = work ts : noShePrag tss where
+>   work (c@(Com ('{' : '-' : '#' : pragma)) : ts) =
+>     case listToMaybe [foldr (++) [] $ ready "notMattering" pragma] >>= (parse pPragma) of
+>       Just _ -> Com "" : work ts
+>       Nothing -> c : work ts
+>   work (t : ts) = t : work ts
+>   work [] = []
