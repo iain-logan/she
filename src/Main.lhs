@@ -35,7 +35,7 @@
 >       hs2'75 = if elem IdiomBrackets $ reqFeat feats then map idiomBrackets hs2'5 else hs2'5
 >       hs4    = if elem OverrideImps  $ reqFeat feats then overImp hs2'75 else hs2'75
 >       hs5    = if elem TypesToKinds  $ reqFeat feats then
->                   addImport $ typesToKinds $ noDerSing $ addSing $ addSingAlone hs4
+>                   addExtens $ addImport $ typesToKinds $ noDerSing $ addSing $ addSingAlone hs4
 >                else hs4
 >       (hs6, herso2) = if elem Superclass $ reqFeat feats then
 >                         superclass (dental hs0) hersi0 hs5
