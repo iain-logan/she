@@ -181,6 +181,24 @@
 >     (map (snd) bls) ++ (snd il : [] : nl : ((redent nl singImport) ++ (map (snd) als)))
 >   _ -> ls
 
+> addExtens :: [[Tok]] -> [[Tok]]
+> addExtens = (:) [NL ("Dunno.lhs", 0), Com ("{-# LANGUAGE " ++
+>   "ScopedTypeVariables, " ++
+>   "TemplateHaskell, " ++
+>   "TypeFamilies, " ++
+>   "GADTs, " ++
+>   "KindSignatures, " ++
+>   "DataKinds, " ++
+>   "PolyKinds, " ++
+>   "TypeOperators, " ++
+>   "FlexibleContexts, " ++
+>   "RankNTypes, " ++
+>   "UndecidableInstances, " ++
+>   "FlexibleInstances, " ++
+>   "InstanceSigs, " ++
+>   "DefaultSignatures " ++
+>   "#-}")]
+
 > addSing :: [[Tok]] -> [[Tok]]
 > addSing ls = map (\ l -> addSing' (parse pGADT l, l)) ls where
 >   addSing' (Just ((s, i), (cs, ds)), l) | elem "SheSingleton" ds =
