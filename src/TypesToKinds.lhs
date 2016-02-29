@@ -182,7 +182,7 @@
 >   _ -> ls
 
 > addExtens :: [[Tok]] -> [[Tok]]
-> addExtens = (:) [NL ("Dunno.lhs", 0), Com ("{-# LANGUAGE " ++
+> addExtens = (++) [[Com ("{-# LANGUAGE " ++
 >   "ScopedTypeVariables, " ++
 >   "TemplateHaskell, " ++
 >   "TypeFamilies, " ++
@@ -197,7 +197,7 @@
 >   "FlexibleInstances, " ++
 >   "InstanceSigs, " ++
 >   "DefaultSignatures " ++
->   "#-}")]
+>   "#-}")], [], [NL ("Dunno.lhs", 0)]]
 
 > addSing :: [[Tok]] -> [[Tok]]
 > addSing ls = map (\ l -> addSing' (parse pGADT l, l)) ls where
