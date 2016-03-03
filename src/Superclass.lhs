@@ -214,7 +214,7 @@ from superclass status.
 >       {  instanceClass = c
 >       ,  instanceRawHeader = []
 >       ,  instanceArgs = munge (sbTyMu sbst) as
->       ,  instanceCxt = [B Rnd (mergeCxt cx0 (munge (sbTyMu sbst) cx1))]
+>       ,  instanceCxt = mergeCxt cx0 (munge (sbTyMu sbst) cx1)
 >       ,  instanceMethods = (uss' ++ vss)
 >       ,  instanceHiding = hs ++ h
 >       }
