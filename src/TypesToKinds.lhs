@@ -112,9 +112,6 @@
 >   where
 >   pityex :: ([(String, Maybe [Tok])], [Tok]) -> [Tok]
 >   pityex (xss, ts) =
->     [KW "forall", Spc " "] ++
->     (xss >>= \ (x, _) -> [Lid x, Spc " "]) ++
->     [Sym ".", Spc " "] ++
 >     (xss >>= \ (x, ss) ->
 >       [Uid "Sing", Spc " ",
 >        B Rnd (Lid x : Spc " " : (maybe [] (\ ss -> Sym "::" : Spc " " : B Rnd (munge tyTTK ss) : []) ss)),
@@ -122,9 +119,6 @@
 >     munge tyTTK ts
 >   pityim :: ([(String, Maybe [Tok])], [Tok]) -> [Tok]
 >   pityim (xss, ts) =
->     [KW "forall", Spc " "] ++
->     (xss >>= \ (x, _) -> [Lid x, Spc " "]) ++
->     [Sym ".", Spc " "] ++
 >     (xss >>= \ (x, ss) ->
 >       [Uid "SingI", Spc " ",
 >        B Rnd (Lid x : Spc " " : (maybe [] (\ ss -> Sym "::" : Spc " " : B Rnd (munge tyTTK ss) : []) ss)),
@@ -133,9 +127,6 @@
 > tyTTK (KW "forall" : ts) = forvis <$> parse pVisForall ts where
 >   forvis :: ([(String, Maybe [Tok])], [Tok]) -> [Tok]
 >   forvis (xss, ts) =
->     [KW "forall", Spc " "] ++
->     (xss >>= \ (x, _) -> [Lid x, Spc " "]) ++
->     [Sym ".", Spc " "] ++
 >     (xss >>= \ (x, ss) ->
 >       [Uid "Proxy", Spc " ",
 >        B Rnd (Lid x : Spc " " : (maybe [] (\ ss -> Sym "::" : Spc " " : B Rnd (munge tyTTK ss) : []) ss)),
