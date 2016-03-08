@@ -74,12 +74,18 @@ cmd should write its output to"
 
 > main :: IO ()
 > main = do
->   x : y : z : _ <- getArgs
->   let x' = replaceExtension x ".hers"
->   putStrLn x
->   putStrLn y
->   putStrLn z
->   f <- readFile y
->   (f', h) <- hsAndHers x (takeBaseName x) f
->   writeFile x' h
->   writeFile z f'
+>   args <- getArgs
+>   case args of
+>     x : y : z : _ -> do
+>       let x' = replaceExtension x ".hers"
+>       putStrLn x
+>       putStrLn y
+>       putStrLn z
+>       f <- readFile y
+>       (f', h) <- hsAndHers x (takeBaseName x) f
+>       writeFile x' h
+>       writeFile z f'
+>     _ -> fail $ "She is a Haskell preprocessor for GHC.\n" ++
+>                 "It is recomended that you let GHC invoke SHE itself.\n" ++
+>                 "To achieve this, add \"{-# OPTIONS_GHC -F -pgmF she #-}\" to the top of your source file."
+
