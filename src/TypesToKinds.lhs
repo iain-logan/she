@@ -90,15 +90,17 @@
 > pVisForall = (,) <$> some (spc *> pBr Rnd piB) <* spc <* teq (Sym "->")
 >                  <*> pRest
 
-> pProxyRequest :: P Tok ([Tok], [Tok])
-> pProxyRequest = (,) <$> some (tok (/= Sym "::")) <* teq (Sym "::") <* spc
->                     <*> pTag Ty (some (tok (/= Sym ":")) <* teq (Sym ":"))
-                     
-> proxyRequest :: [Tok] -> [Tok] -> Tok
-> proxyRequest tm ty = B Rnd [Uid "Proxy"]
+> pProxyRequest :: P Tok ([Tok], Maybe [Tok])
+> pProxyRequest = (,) <$> some (tok (/= Sym "::")) <*> pOpt (teq (Sym "::") *> spc *>
+>                         pTag Ty (some (tok (/= Sym ":")) <* teq (Sym ":")))
+
+> proxyRequest :: [Tok] -> Maybe [Tok] -> Tok
+> proxyRequest [] ty = B Rnd $ maybe [] (\ ty -> ty) ty
+> proxyRequest tm ty = B Rnd [Uid "Proxy", Spc " ", Sym "::", Spc " ", Uid "Proxy", Spc " ",
+>                             B Rnd (maybe (init tm) (\ ty -> tm ++ (Sym "::" : ty)) ty)]
 
 > witMu :: [Tok] -> Maybe [Tok]
-> witMu (B Sqr us : ts) = Nothing -- not sure when we have square brackets in curly
+> --witMu (B Sqr us : ts) = Nothing -- not sure when we have square brackets in curly
 > witMu (Uid s : ts) = Just $ Uid (singPre ++ s) : munge witMu ts
 > witMu (Sym (':' : s) : ts) = Just $ Sym (':' : singInfPre ++ s) : munge witMu ts
 > witMu _ = Nothing
@@ -136,6 +138,7 @@
 
 > ttkMu :: [Tok] -> Maybe [Tok]
 > ttkMu (T Ty us : ts) = Just $ T Ty (munge tyTTK us) : munge ttkMu ts
+> ttkMu (B Rnd [Sym "::", T Ty []] : ts) = Just $ B Rnd [Uid "Proxy"] : munge ttkMu ts
 > ttkMu (B Rnd (Sym ":" : us) : ts) = case parse pProxyRequest us of
 >   Just (tm, ty) -> Just $ proxyRequest tm ty : munge ttkMu ts
 >   _ -> Nothing
