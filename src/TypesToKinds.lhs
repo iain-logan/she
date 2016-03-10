@@ -94,13 +94,21 @@
 > pProxyRequest = (,) <$> some (tok (/= Sym "::")) <*> pOpt (teq (Sym "::") *> spc *>
 >                         pTag Ty (some (tok (/= Sym ":")) <* teq (Sym ":")))
 
+> proxySurround :: [Tok] -> Tok
+> proxySurround x = B Rnd [Uid "Proxy", Spc " ", Sym "::", Spc " ", Uid "Proxy", Spc " ", B Rnd x]
+
 > proxyRequest :: [Tok] -> Maybe [Tok] -> Tok
-> proxyRequest [] ty = B Rnd $ maybe [] (\ ty -> ty) ty
-> proxyRequest tm ty = B Rnd [Uid "Proxy", Spc " ", Sym "::", Spc " ", Uid "Proxy", Spc " ",
->                             B Rnd (maybe (init tm) (\ ty -> tm ++ (Sym "::" : ty)) ty)]
+> proxyRequest [] ty = proxySurround $ maybe [] (\ ty -> ty) ty
+> proxyRequest tm ty = proxySurround $ maybe (init tm) (\ ty -> tm ++ (Sym "::" : ty)) ty
 
 > witMu :: [Tok] -> Maybe [Tok]
-> --witMu (B Sqr us : ts) = Nothing -- not sure when we have square brackets in curly
+> witMu (B Sqr us : ts) = Just $ mkL (munge witMu us) : munge witMu ts where
+>   mkL [] = Uid "SheSpecialWitNil"
+>   mkL ts = case span (/= Sym ",") ts of
+>     (ss, []) ->
+>       B Rnd [B Rnd ss, Spc " ", Sym ":$%$%$%:", Spc " ", Uid "SheSpecialNil"]
+>     (ss, _ : ts) ->
+>       B Rnd [B Rnd ss, Spc " ", Sym ":$%$%$%:", Spc " ", mkL ts]
 > witMu (Uid s : ts) = Just $ Uid (singPre ++ s) : munge witMu ts
 > witMu (Sym (':' : s) : ts) = Just $ Sym (':' : singInfPre ++ s) : munge witMu ts
 > witMu _ = Nothing
@@ -163,16 +171,17 @@
 >      Uid "TH"] ++
 >   imp [Uid "Data",
 >      Sym ".",
->      Uid "Proxy"] where
+>      Uid "Proxy"] ++ [[]] ++ [line] where
 >   line = [NL ("Dunno.lhs", 0)]
 >   imp :: [Tok] -> [[Tok]]
->   imp xs = (KW "import": Spc " " : xs):
->     [] : line : []
+>   imp xs = [(KW "import": Spc " " : xs)]
 
 > addImport :: [[Tok]] -> [[Tok]]
 > addImport ls = case span (\ (p, _) -> Nothing == p) (map (\ l -> (parse pModule l, l)) ls) of
 >   (bls, (il : (_, []) : (_, nl@(NL (f, l) : nls)) : als)) ->
->     (map (snd) bls) ++ (snd il : [] : nl : ((redent nl singImport) ++ (map (snd) als)))
+>     (map (snd) bls) ++ (snd il : [] : nl : ((redent (filter (notCom) nl) singImport) ++ (map (snd) als))) where
+>       notCom (Com _) = False
+>       notCom _ = True
 >   _ -> ls
 
 > addExtens :: [[Tok]] -> [[Tok]]
