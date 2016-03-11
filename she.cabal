@@ -32,7 +32,8 @@ executable she
 
     build-depends:      base >=3 && < 5,
                         mtl >=2 && <3,
-                        filepath >= 1 && < 2
+                        filepath >= 1 && < 2,
+                        singletons >= 2
     hs-source-dirs:     src
 
     other-modules:      Aspect
