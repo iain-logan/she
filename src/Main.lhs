@@ -76,7 +76,7 @@ cmd should write its output to"
 > main = do
 >   args <- getArgs
 >   case args of
->     x : y : z : _ -> do
+>     x : y : z : [] -> do
 >       let x' = replaceExtension x ".hers"
 >       putStrLn x
 >       putStrLn y
@@ -85,7 +85,8 @@ cmd should write its output to"
 >       (f', h) <- hsAndHers x (takeBaseName x) f
 >       writeFile x' h
 >       writeFile z f'
->     _ -> fail $ "She is a Haskell preprocessor for GHC.\n" ++
->                 "It is recomended that you let GHC invoke SHE itself.\n" ++
->                 "To achieve this, add \"{-# OPTIONS_GHC -F -pgmF she #-}\" to the top of your source file."
+>     _ -> do putStrLn "She is a Haskell preprocessor."
+>             putStrLn "It is recomended that you let GHC invoke SHE itself."
+>             putStrLn "To achieve this, add \"{-# OPTIONS_GHC -F -pgmF she #-}\" to the top of your source file."
+>             return ()
 
