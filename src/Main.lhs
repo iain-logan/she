@@ -17,6 +17,7 @@
 > import IdiomBrackets
 > import Superclass
 > import Parsley
+> import Chase
 
 > aspect :: [[Tok]] -> [[Tok]] -> ([[Tok]], [[Tok]], [[Tok]])
 > aspect inh hs0 = (hersi0, herso0, hs2) where
@@ -51,16 +52,20 @@
 > hsAndHers :: String -> FilePath -> String -> IO (String, String)
 > hsAndHers f mo s = do
 >   let ihs = ready f s
->   let feats = case features ihs of
->         [] -> allFeats
->         feats -> feats
->   pcs <- storySoFar ihs
->   if (not $ foldr (\ fr suc -> (reqSat fr $ reqFeat feats) && suc) True feats) then
->     fail $ "Could not satisfy all feature requirments." ++
->            "An enabled feature depends on a disabled feature"
+>   toChase <- imports (takeDirectory f) ihs
+>   if (0 /= (length $ filter ((f ==) . fst) toChase)) then
+>     fail $ "SHE detects that " ++ f ++ " contains a circular dependency"
 >     else do
->       let (hers, hs) = sheGoes mo pcs (noShePrag ihs) feats
->       return (tokssOut hs, tokssOut hers)
+>       sequence $ map (\ (fp, f) -> sheStartsNoRead fp f (replaceExtension fp ".hun")) toChase
+>       let selectedFeats = features ihs
+>       let feats = if null selectedFeats then allFeats else selectedFeats
+>       pcs <- storySoFar ihs
+>       if (not $ foldr (\ fr suc -> (reqSat fr $ reqFeat feats) && suc) True feats) then
+>         fail $ "Could not satisfy all feature requirments." ++
+>                "An enabled feature depends on a disabled feature"
+>         else do
+>           let (hers, hs) = sheGoes mo pcs (noShePrag ihs) feats
+>           return (tokssOut hs, tokssOut hers)
 
 Parameters
 x filepath of the original source file (used to create .hers file)
@@ -72,19 +77,26 @@ From the haskell documentation about pre processors
 name of the file holding the input, and the third is the name of the file where
 cmd should write its output to"
 
+> sheStartsNoRead :: FilePath -> String -> FilePath -> IO ()
+> sheStartsNoRead x f z = do
+>   let x' = replaceExtension x ".hers"
+>   (f', h) <- hsAndHers x (takeBaseName x) f
+>   writeFile x' h
+>   writeFile z f'
+
+> sheStarts :: FilePath -> FilePath -> FilePath -> IO ()
+> sheStarts x y z = do
+>   putStrLn x
+>   putStrLn y
+>   putStrLn z
+>   f <- readFile y
+>   sheStartsNoRead x f z
+
 > main :: IO ()
 > main = do
 >   args <- getArgs
 >   case args of
->     x : y : z : [] -> do
->       let x' = replaceExtension x ".hers"
->       putStrLn x
->       putStrLn y
->       putStrLn z
->       f <- readFile y
->       (f', h) <- hsAndHers x (takeBaseName x) f
->       writeFile x' h
->       writeFile z f'
+>     x : y : z : [] -> sheStarts x y z
 >     _ -> do putStrLn "She is a Haskell preprocessor."
 >             putStrLn "It is recomended that you let GHC invoke SHE itself."
 >             putStrLn "To achieve this, add \"{-# OPTIONS_GHC -F -pgmF she #-}\" to the top of your source file."

@@ -30,10 +30,12 @@ build-type:         Simple
 executable she
     main-is:            Main.lhs
 
-    build-depends:      base >=3 && < 5,
-                        mtl >=2 && <3,
-                        filepath >= 1 && < 2,
-                        singletons >= 2
+    build-depends:      Cabal >= 1.22.5.0
+                      , base >=3 && < 5
+                      , directory >= 1
+                      , filepath >= 1 && < 2
+                      , mtl >=2 && <3
+                      , singletons >= 2
     hs-source-dirs:     src
 
     other-modules:      Aspect
