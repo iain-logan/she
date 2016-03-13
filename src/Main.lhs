@@ -54,7 +54,7 @@
 >   let ihs = ready f s
 >   toChase <- imports (takeDirectory f) ihs
 >   if (0 /= (length $ filter ((f ==) . fst) toChase)) then
->     fail $ "SHE detects that " ++ f ++ " contains a circular dependency"
+>     fail $ "SHE detects that " ++ f ++ " contains a circular dependency!"
 >     else do
 >       sequence $ map (\ (fp, f) -> sheStartsNoRead fp f (replaceExtension fp ".hun")) toChase
 >       let selectedFeats = features ihs

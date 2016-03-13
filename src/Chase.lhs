@@ -4,9 +4,12 @@
 > import HaLay
 > import Data.Maybe
 > import Control.Applicative
+> import Control.Monad
+> import Control.Exception
 > import System.FilePath
 > import System.Directory
 > import Distribution.Simple.PreProcess.Unlit
+> import System.IO.Error
 
 > data Import = Import [String]
 >   deriving Show
@@ -27,18 +30,28 @@
 > isLocal cur (Import imps) = do
 >   let path = foldr (\ pb -> (++ ('/' : pb))) cur imps
 >   let pathHs = path ++ ".hs"
->   isHs <- doesFileExist $ pathHs
->   case isHs of
->     True -> do
->       f <- readFile pathHs
->       return $ Just $ (pathHs, f)
->     False -> do
+>   f <- tryJust (guard . isDoesNotExistError) $ readFile pathHs
+>   case f of
+>     Right f -> do
+>       isOld <- isOutDate pathHs
+>       return $ if isOld then Just $ (pathHs, f) else Nothing
+>     Left e  -> do
 >       let pathLhs = path ++ ".lhs"
->       isLhs <- doesFileExist $ pathLhs
->       case isLhs of
->         True -> do
->           f <- readFile pathLhs
->           case unlit pathLhs f of
->             Left  f -> return $ Just $ (pathLhs, f)
->             Right e -> fail e
->         False -> return Nothing
+>       f <- tryJust (guard . isDoesNotExistError) $ readFile pathLhs
+>       case f of
+>         Right f -> case unlit pathLhs f of
+>           Left f  -> do
+>             isOld <- isOutDate pathLhs
+>             return $ if isOld then Just $ (pathLhs, f) else Nothing
+>           Right e -> fail e
+>         Left e  -> return Nothing
+
+> isOutDate :: FilePath -> IO Bool
+> isOutDate fps = do
+>   let fph = replaceExtension fps ".hers"
+>   srcT <- getModificationTime fps
+>   herT <- tryJust (guard . isDoesNotExistError) (getModificationTime fph)
+>   case herT of
+>     Left e -> return True
+>     Right herT -> return $ srcT > herT
+
