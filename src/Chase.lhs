@@ -32,13 +32,26 @@
 >   let pathHs = path ++ ".hs"
 >   f <- tryJust (guard . isDoesNotExistError) $ readFile pathHs
 >   case f of
->     Right f -> return $ Just $ (pathHs, f)
+>     Right f -> do
+>       isOld <- isOutDate pathHs
+>       return $ if isOld then Just $ (pathHs, f) else Nothing
 >     Left e  -> do
 >       let pathLhs = path ++ ".lhs"
 >       f <- tryJust (guard . isDoesNotExistError) $ readFile pathLhs
 >       case f of
 >         Right f -> case unlit pathLhs f of
->           Left f  -> return $ Just $ (pathLhs, f)
+>           Left f  -> do
+>             isOld <- isOutDate pathLhs
+>             return $ if isOld then Just $ (pathLhs, f) else Nothing
 >           Right e -> fail e
 >         Left e  -> return Nothing
+
+> isOutDate :: FilePath -> IO Bool
+> isOutDate fps = do
+>   let fph = replaceExtension fps ".hers"
+>   srcT <- getModificationTime fps
+>   herT <- tryJust (guard . isDoesNotExistError) (getModificationTime fph)
+>   case herT of
+>     Left e -> return True
+>     Right herT -> return $ srcT > herT
 
