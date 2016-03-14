@@ -56,7 +56,7 @@
 >   if (0 /= (length $ filter ((f ==) . fst) toChase)) then
 >     fail $ "SHE detects that " ++ f ++ " contains a circular dependency!"
 >     else do
->       sequence $ map (\ (fp, f) -> sheStartsNoRead fp f (replaceExtension fp ".hun")) toChase
+>       sequence $ map (\ (fp, f) -> sheStartsNoReadJstHers fp f) toChase
 >       let selectedFeats = features ihs
 >       let feats = if null selectedFeats then allFeats else selectedFeats
 >       pcs <- storySoFar ihs
@@ -67,15 +67,11 @@
 >           let (hers, hs) = sheGoes mo pcs (noShePrag ihs) feats
 >           return (tokssOut hs, tokssOut hers)
 
-Parameters
-x filepath of the original source file (used to create .hers file)
-y filepath of the file holding the input (used to locate the hs source, with she sugar in it)
-z filepath of the file where she should write its output to
-
-From the haskell documentation about pre processors
-"the first argument is the name of the original source file, the second is the
-name of the file holding the input, and the third is the name of the file where
-cmd should write its output to"
+> sheStartsNoReadJstHers :: FilePath -> String -> IO ()
+> sheStartsNoReadJstHers x f = do
+>   let x' = replaceExtension x ".hers"
+>   (f', h) <- hsAndHers x (takeBaseName x) f
+>   writeFile x' h
 
 > sheStartsNoRead :: FilePath -> String -> FilePath -> IO ()
 > sheStartsNoRead x f z = do
@@ -91,6 +87,11 @@ cmd should write its output to"
 >   putStrLn z
 >   f <- readFile y
 >   sheStartsNoRead x f z
+
+Parameters
+x filepath of the original source file (used to create .hers file)
+y filepath of the file holding the input (used to locate the hs source, with she sugar in it)
+z filepath of the file where she should write its output to
 
 > main :: IO ()
 > main = do
