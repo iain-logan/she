@@ -28,7 +28,7 @@
 >   | f == show IdiomBrackets = Just $ FeatReq IdiomBrackets []
 >   | f == show OverrideImps  = Just $ FeatReq OverrideImps [TypesToKinds]
 >   | f == show TypesToKinds  = Just $ FeatReq TypesToKinds []
->   | f == show Superclass    = Just $ FeatReq Superclass [Aspect]
+>   | f == show Superclass    = Just $ FeatReq Superclass []
 >   | otherwise = Nothing
 
 > allFeats :: [FeatureReq]

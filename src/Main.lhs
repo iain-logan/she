@@ -19,9 +19,8 @@
 > import Parsley
 > import Chase
 
-> aspect :: [[Tok]] -> [[Tok]] -> ([[Tok]], [[Tok]], [[Tok]])
-> aspect inh hs0 = (hersi0, herso0, hs2) where
->   hersi0 = getGuts inh
+> aspect :: [[Tok]] -> [[Tok]] -> ([[Tok]], [[Tok]])
+> aspect hs0 hersi0 = (herso0, hs2) where
 >   (higs0, _) = foldMap higgle hersi0
 >   (higs1, hs1) = foldMap higgle hs0
 >   higs = higs0 ++ higs1
@@ -30,8 +29,9 @@
 
 > sheGoes :: FilePath -> [[Tok]] -> [[Tok]] -> [FeatureReq] -> ([[Tok]], [[Tok]])
 > sheGoes mo inh hs0 feats =
->   let (hersi0, herso0, hs2) =
->                if elem Aspect        $ reqFeat feats then aspect inh hs0 else ([], [], hs0)
+>   let hersi0 = getGuts inh
+>       (herso0, hs2) =
+>                if elem Aspect        $ reqFeat feats then aspect hs0 hersi0 else ([], hs0)
 >       hs2'5  = if elem DeBruijn      $ reqFeat feats then deBruijn hs2 else hs2
 >       hs2'75 = if elem IdiomBrackets $ reqFeat feats then map idiomBrackets hs2'5 else hs2'5
 >       hs4    = if elem OverrideImps  $ reqFeat feats then overImp hs2'75 else hs2'75
