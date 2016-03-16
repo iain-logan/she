@@ -4,3 +4,6 @@ doc
 *.hi
 *~
 *.hers
+*.hspp
+*.dyn_o
+*.dyn_hi

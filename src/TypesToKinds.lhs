@@ -203,16 +203,19 @@
 >   "#-}")], [], [NL ("Dunno.lhs", 0)]]
 
 > addSing :: [[Tok]] -> [[Tok]]
-> addSing ls = map (\ l -> addSing' (parse pGADT l, l)) ls where
->   addSing' (Just ((s, i), (cs, ds)), l) | elem "SheSingleton" ds =
->     [Sym "$", B Rnd [Lid "singletons", Spc " ",
->                      B Sqr (Sym "d": Sym "|" :
->                             NL ("Dunno.lhs", 0) :
->                             (indent l) ++
->                             [NL ("Dunno.lhs", 0), Spc "  ", Sym "|"])],
->      NL ("Dunno.lhs", 0)]
->   addSing' (_, l) = l
-
+> addSing (nl@(NL (fn, ln) : spc) : l : ls) = case parse pGADT l of
+>   Just  ((s, i), (cs, ds)) ->
+>     if elem "SheSingleton" ds
+>       then
+>         nl : l : (NL (s ++ "Sing", 0) : spc) :
+>         [Sym "$", B Rnd ([Lid "genSingletons", Spc " ", B Sqr (Sym "''" : Uid s : [])])] :
+>         (addSing ls)
+>       else
+>         nl : [Uid "SHITE"] : (addSing (l : ls))
+>   Nothing -> nl : (addSing (l : ls))
+> addSing (l : ls) = l : (addSing ls)
+> addSing _ = []
+   
 > addSingAlone :: [[Tok]] -> [[Tok]]
 > addSingAlone ls = map (\ l -> fromMaybe l ((genSing) <$> (parse pSingAlone l))) ls where
 >   genSing :: String -> [Tok]
@@ -224,7 +227,7 @@
 
 > indent :: [Tok] -> [Tok]
 > indent ts = (Spc "  ") : (indent' ts) where
->   indent' (nl@(NL (f, l)) : ts) = nl : (Sym "  ") : (indent' ts)
+>   indent' (nl@(NL (f, l)) : ts) = nl : (Spc "  ") : (indent' ts)
 >   indent' (B b ss : ts) = B b (indent' ss) : indent' ts
 >   indent' (L k sss : ts) = L k (map (indent') sss) : indent' ts
 >   indent' (T t ss : ts) = T t (indent' ss) : indent' ts
@@ -257,7 +260,7 @@
 > pGADT :: P Tok ((String, Int), ([ConTy], [String]))
 > pGADT = (,)
 >   <$   tok (`elem` [KW "data", KW "newtype"]) <* spc
->   <*>  pTag Ty ((,) <$ spc <*> uid <* spc <*>  pGArity <* pRest) <* spc
+>   <*>  pTag Ty ((,) <$ spc <*> uid <* spc <*> pGArity <* pRest) <* spc
 >   <*>  pLay "where" ((,) <$> pGCons <*> pDer)
 >   <*   pRest
 >   where

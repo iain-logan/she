@@ -5,10 +5,8 @@
 > data Nat :: * where
 >   Z :: Nat
 >   S :: Nat -> Nat
->   deriving (Show, Eq)
+>   deriving (Show, Eq, SheSingleton)
  
-> deriving instance SheSingleton Nat
-
 > data Vec :: Nat -> * -> * where
 >   VNil :: Vec Z x
 >   (:-) :: x -> Vec n x -> Vec (S n) x
