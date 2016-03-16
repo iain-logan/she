@@ -211,7 +211,7 @@
 >         [Sym "$", B Rnd ([Lid "genSingletons", Spc " ", B Sqr (Sym "''" : Uid s : [])])] :
 >         (addSing ls)
 >       else
->         nl : [Uid "SHITE"] : (addSing (l : ls))
+>         nl : (addSing (l : ls))
 >   Nothing -> nl : (addSing (l : ls))
 > addSing (l : ls) = l : (addSing ls)
 > addSing _ = []
