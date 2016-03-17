@@ -159,11 +159,11 @@
 > ttkMu _ = Nothing
 
 > pModule :: P Tok ()
-> pModule = teq (KW "module") *> spc
->   *> uid *> spc *> teq (L "where" []) *> pEnd
+> pModule = teq (KW "module") *>
+>             some (tok (/= L "where" [])) *> teq (L "where" []) *> pEnd
 
-> singImport :: [[Tok]]
-> singImport =
+> singImport :: [Tok] -> [[Tok]]
+> singImport spc =
 >   imp [Uid "Data",
 >      Sym ".",
 >      Uid "Singletons",
@@ -171,18 +171,24 @@
 >      Uid "TH"] ++
 >   imp [Uid "Data",
 >      Sym ".",
->      Uid "Proxy"] ++ [[]] ++ [line] where
->   line = [NL ("Dunno.lhs", 0)]
+>      Uid "Proxy"] where
+>   line = NL ("TTKImports.lhs", 0) : spc
 >   imp :: [Tok] -> [[Tok]]
->   imp xs = [(KW "import": Spc " " : xs)]
+>   imp xs = [line, (KW "import": Spc " " : xs)]
 
 > addImport :: [[Tok]] -> [[Tok]]
-> addImport ls = case span (\ (p, _) -> Nothing == p) (map (\ l -> (parse pModule l, l)) ls) of
->   (bls, (il : (_, []) : (_, nl@(NL (f, l) : nls)) : als)) ->
->     (map (snd) bls) ++ (snd il : [] : nl : ((redent (filter (notCom) nl) singImport) ++ (map (snd) als))) where
->       notCom (Com _) = False
->       notCom _ = True
->   _ -> ls
+> addImport (nl@(NL (fn, ln) : spc) : l : ls) = case parse pModule l of
+>   Just _ -> nl : l : (singImport spc) ++ ls
+>   Nothing -> nl : (addImport (l : ls))
+> addImport (l : ls) = l : addImport ls
+> addImport _ = []
+
+   case span (\ (p, _) -> Nothing == p) (map (\ l -> (parse pModule l, l)) ls) of
+   (bls, (il : (_, []) : (_, nl@(NL (f, l) : nls)) : als)) ->
+     (map (snd) bls) ++ (snd il : [] : nl : ((redent (filter (notCom) nl) singImport) ++ (map (snd) als))) where
+       notCom (Com _) = False
+       notCom _ = True
+   _ -> ls
 
 > addExtens :: [[Tok]] -> [[Tok]]
 > addExtens = (++) [[Com ("{-# LANGUAGE " ++
