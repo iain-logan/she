@@ -7,6 +7,7 @@
 > import Data.Foldable
 > import Data.List
 > import Debug.Trace
+> import System.Exit
 
 > import HaLay
 > import Pragma
@@ -55,15 +56,19 @@
 >   let ihs = ready f s
 >   toChase <- imports (takeDirectory f) ihs
 >   if (0 /= (length $ filter ((f ==) . fst) toChase)) then
->     fail $ "SHE detects that " ++ f ++ " contains a circular dependency!"
+>     do
+>       putStrLn $ "SHE detects that " ++ f ++ " contains a circular dependency!"
+>       exitFailure
 >     else do
 >       sequence $ map (\ (fp, f) -> sheStartsNoReadJstHers fp f) toChase
 >       let selectedFeats = features ihs
 >       let feats = if null selectedFeats then allFeats else selectedFeats
 >       pcs <- storySoFar ihs
 >       if (not $ foldr (\ fr suc -> (reqSat fr $ reqFeat feats) && suc) True feats) then
->         fail $ "Could not satisfy all feature requirments." ++
->                "An enabled feature depends on a disabled feature"
+>         do
+>           putStrLn "Could not satisfy all feature requirments."
+>           putStrLn "An enabled feature depends on a disabled feature."
+>           exitFailure
 >         else do
 >           let (hers, hs) = sheGoes mo pcs (noShePrag ihs) feats
 >           return (tokssOut hs, tokssOut hers)
@@ -94,13 +99,15 @@ x filepath of the original source file (used to create .hers file)
 y filepath of the file holding the input (used to locate the hs source, with she sugar in it)
 z filepath of the file where she should write its output to
 
-> main :: IO ()
+> main :: IO ExitCode
 > main = do
 >   args <- getArgs
 >   case args of
->     x : y : z : [] -> sheStarts x y z
+>     x : y : z : [] -> do
+>       sheStarts x y z
+>       exitSuccess
 >     _ -> do putStrLn "She is a Haskell preprocessor."
 >             putStrLn "It is recomended that you let GHC invoke SHE itself."
 >             putStrLn "To achieve this, add \"{-# OPTIONS_GHC -F -pgmF she #-}\" to the top of your source file."
->             return ()
+>             exitWith $ ExitFailure 2
 

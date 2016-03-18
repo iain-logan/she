@@ -160,7 +160,7 @@
 
 > pModule :: P Tok ()
 > pModule = teq (KW "module") *>
->             some (tok (/= L "where" [])) *> teq (L "where" []) *> pEnd
+>             some (tok (/= L "where" [])) *> teq (L "where" []) <* pRest
 
 > singImport :: [Tok] -> [[Tok]]
 > singImport spc =

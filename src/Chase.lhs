@@ -10,25 +10,42 @@
 > import System.Directory
 > import Distribution.Simple.PreProcess.Unlit
 > import System.IO.Error
+> import Data.Foldable
+> import System.Exit
 
-> data Import = Import [String]
->   deriving Show
+> type Import = [String]
+> type Module = [String]
+
+> pPath :: P Tok [String]
+> pPath = (pSep (teq (Sym ".")) uid) <|> pure <$> uid
+
+> pModule :: P Tok Module
+> pModule = reverse <$> (spc *> teq (KW "module") *> spc *> pPath <* spc <* teq (L "where" []) <* pRest)
 
 > pImport :: P Tok Import
-> pImport = Import <$> (spc *> teq (KW "import") *> spc *> path <* spc <* pEnd) where
->   path = (pSep (teq (Sym ".")) uid) <|> pure <$> uid
+> pImport = (spc *> teq (KW "import") *> spc *> pPath <* spc <* pEnd) where
 
 > imports :: FilePath -> [[Tok]] -> IO [(FilePath, String)]
 > imports cur [] = return []
-> imports cur (ts : tts) = let tail = imports cur tts in
->   case parse pImport ts of
->     Just is -> isLocal cur is >>=
->       maybe tail (\ fp -> tail >>= (\ fps -> return $ fp : fps))
->     Nothing -> tail where
+> imports cur (ts : tts) = case parse pModule ts of
+>   Nothing -> imports cur tts
+>   Just ms -> imports' cur tts ms where
+>     imports' :: FilePath -> [[Tok]] -> Module -> IO [(FilePath, String)]
+>     imports' cur [] _ = return []
+>     imports' cur (ts : tts) ms = let tail = imports' cur tts ms in
+>       case (parse pImport ts) of
+>         Just is -> isLocal cur is ms >>=
+>           maybe tail (\ fp -> tail >>= (\ fps -> return $ fp : fps))
+>         Nothing -> tail
 
-> isLocal :: FilePath -> Import -> IO (Maybe (FilePath, String))
-> isLocal cur (Import imps) = do
->   let path = foldr (\ pb -> (++ ('/' : pb))) cur imps
+> backUpPath :: FilePath -> Module -> FilePath
+> backUpPath pre (m : ms) = backUpPath (takeDirectory pre) ms
+> backUpPath pre _ = pre
+
+> isLocal :: FilePath -> Import -> Module -> IO (Maybe (FilePath, String))
+> isLocal curAll imps ms = do
+>   let cur = backUpPath curAll ms
+>   let path = foldl' (\ pb -> ((pb ++ "/") ++ )) cur imps
 >   let pathHs = path ++ ".hs"
 >   f <- tryJust (guard . isDoesNotExistError) $ readFile pathHs
 >   case f of
@@ -43,7 +60,9 @@
 >           Left f  -> do
 >             isOld <- isOutDate pathLhs
 >             return $ if isOld then Just $ (pathLhs, f) else Nothing
->           Right e -> fail e
+>           Right e -> do
+>             putStrLn e
+>             exitFailure
 >         Left e  -> return Nothing
 
 > isOutDate :: FilePath -> IO Bool
