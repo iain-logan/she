@@ -39,6 +39,7 @@
 >         Nothing -> tail
 
 > backUpPath :: FilePath -> Module -> FilePath
+> backUpPath pre (m : []) = pre
 > backUpPath pre (m : ms) = backUpPath (takeDirectory pre) ms
 > backUpPath pre _ = pre
 
