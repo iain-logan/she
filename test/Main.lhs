@@ -3,6 +3,7 @@
 > import Aspect.Foo
 > import TTK.Vec
 > import Idiom.Vec
+> import DeBruijn.Binding
 
 > main :: IO ()
 > main = do
