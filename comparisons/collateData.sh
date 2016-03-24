@@ -1,10 +1,11 @@
 #!/bin/bash
 
-hask="./hask/Vec.lhs"
-she="./she/Vec.lhs"
-sing="./sing/Vec.lhs"
+hask="./hask/Vec.hs"
+she="./she/Vec.hs"
+sing="./sing/Vec.hs"
+agda="./agda/Vec.agda"
 
-sources=("$she" "$sing" "$hask")
+sources=("$she" "$sing" "$hask" "$agda")
 
 rm results.csv
 
