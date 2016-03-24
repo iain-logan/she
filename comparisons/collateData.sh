@@ -6,7 +6,7 @@ sing="./sing/Vec.hs"
 agda="./agda/Vec.agda"
 
 sources=("$she" "$sing" "$hask" "$agda")
-names=("She" "Singleton\nLibrary" "Haskell" "Agda")
+names=("SHE" "Singleton\nLibrary" "Haskell" "Agda")
 
 rm results.csv
 
