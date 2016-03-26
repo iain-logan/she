@@ -70,3 +70,9 @@ This example covers the following features
 
 > v6 :: Vec (S (Z)) Nat
 > v6 = vtake {S (Z)} (:S Z :: Nat:) (Z :- (Z :- VNil))
+
+> vecPair :: pi n m. x -> (Vec n x, Vec m x)
+> vecPair @{n} @{m} x = (vec @{n} x, vec @{m} x)
+
+> vp1 :: (Vec (S Z) Nat, Vec (S (S Z)) Nat)
+> vp1 = vecPair @{S Z} @{S (S Z)} Z

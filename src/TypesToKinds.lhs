@@ -318,10 +318,22 @@
 > genWorkerCall :: ImpFunct -> [Tok]
 > genWorkerCall (ImpFunct name foralls imps args rtyp) =
 >   [Lid name, Spc " "] ++ namedArgs ++ [Spc " ", Sym "=", Spc " ", Lid (workerPrefix ++ name), Spc " "] ++
->    foldr (++) [] (map (\ _ -> [Lid "sing", Spc " "]) imps) ++
->    namedArgs ++ [Spc " "] where
+>   enterScope (numImps imps) ++
+>   namedArgs ++ [Spc " "] where
 >      namedArgs = intercalate ([Spc " "]) [ [Lid (replicate 10 l)] | l <- take (length args) ['a'..] ]
->   
+>      numImps :: [[Tok]] -> Int
+>      numImps [] = 0
+>      numImps (ts : tss) = (numImpss ts) + (numImps tss)
+>      numImpss :: [Tok] -> Int
+>      numImpss [] = 0
+>      numImpss (B Rnd bts : ts) = 1 + (numImpss ts)
+>      numImpss (Lid "pi" : ts) = numImpss ts
+>      numImpss (Lid t : ts) = 1 + (numImpss ts)
+>      numImpss (t : ts) = numImpss ts
+>      enterScope :: Int -> [Tok]
+>      enterScope 0 = []
+>      enterScope n | n < 0 = []
+>                   | n > 0 = Lid "sing" : Spc " " : enterScope (n-1)
 
 > genWorker :: ImpFunct -> [Tok]
 > genWorker (ImpFunct name foralls imps args rtyp) =
