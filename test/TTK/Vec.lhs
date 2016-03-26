@@ -41,11 +41,11 @@ This example covers the following features
 > vappend VNil ys = ys
 > vappend (x :- xs) ys = x :- vappend xs ys
 > 
-> vec :: pi (n). x -> Vec n x
+> vec :: pi n. x -> Vec n x
 > vec @{Z} x = VNil
 > vec @{S n} x = x :- vec @{n} x
 
-> vtake :: pi (n) -> forall (m) -> Vec (n :+ m) x -> Vec (n) x
+> vtake :: pi n -> forall m -> Vec (n :+ m) x -> Vec n x
 > vtake {Z} m xs = VNil
 > vtake {S n} m @y(x :- xs) = x :- (vtake n m xs)
 

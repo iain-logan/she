@@ -79,15 +79,15 @@
 > piB = (,) <$ spc <*> lid <* spc <*> pOpt (teq (Sym "::") *> spc *> pRest)
 
 > pPiExp :: P Tok ([(String, Maybe [Tok])], [Tok])
-> pPiExp = (,)  <$> some (spc *> pBr Rnd piB) <* spc <* teq (Sym "->")
+> pPiExp = (,)  <$> some (spc *> (pBr Rnd piB <|> ((\ s -> (s, Nothing)) <$> lid))) <* spc <* teq (Sym "->")
 >               <*> pRest
 
 > pPiImp :: P Tok ([(String, Maybe [Tok])], [Tok])
-> pPiImp = (,)  <$> some (spc *> pBr Rnd piB) <* spc <* teq (Sym ".")
+> pPiImp = (,)  <$> some (spc *> (pBr Rnd piB <|> ((\ s -> (s, Nothing)) <$> lid))) <* spc <* teq (Sym ".")
 >               <*> pRest
 
 > pVisForall :: P Tok ([(String, Maybe [Tok])], [Tok])
-> pVisForall = (,) <$> some (spc *> pBr Rnd piB) <* spc <* teq (Sym "->")
+> pVisForall = (,) <$> some (spc *> (pBr Rnd piB  <|> ((\ s -> (s, Nothing)) <$> lid))) <* spc <* teq (Sym "->")
 >                  <*> pRest
 
 > pProxyRequest :: P Tok ([Tok], Maybe [Tok])

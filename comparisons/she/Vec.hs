@@ -25,15 +25,15 @@ vappend :: Vec m x -> Vec n x -> Vec (m :+ n) x
 vappend VNil ys = ys
 vappend (x :- xs) ys = x :- vappend xs ys
  
-vec :: pi (n). x -> Vec n x
+vec :: pi n. x -> Vec n x
 vec @{Z} x = VNil
 vec @{S n} x = x :- vec @{n} x
 
-vtake :: pi (n) -> forall (m) -> Vec (n :+ m) x -> Vec (n) x
+vtake :: pi n -> forall m -> Vec (n :+ m) x -> Vec n x
 vtake {Z} m xs = VNil
 vtake {S n} m (x :- xs) = x :- (vtake n m xs)
 
-instance pi (n). Applicative (Vec n) where
+instance pi n. Applicative (Vec n) where
   pure = vec
   (<*>) = vapp where
         vapp :: Vec m (s -> t) -> Vec m s -> Vec m t
