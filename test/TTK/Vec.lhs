@@ -1,6 +1,6 @@
 > {-# OPTIONS_GHC -F -pgmF she #-}
 
-> {-# SHE TypesToKinds, OverrideImps, IdiomBrackets, Superclass #-}
+> {-# SHE DependentQuantifiers, OverrideImps, Superclass #-}
 
 This example covers the following features
  - TypesToKinds

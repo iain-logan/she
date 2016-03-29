@@ -1,7 +1,5 @@
 {-# OPTIONS_GHC -F -pgmF she #-}
 
-{-# SHE TypesToKinds, OverrideImps, Superclass #-}
-
 module Vec where
 
 data Nat :: * where

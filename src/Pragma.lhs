@@ -7,7 +7,7 @@
 > import HaLay
 > import Parsley
 
-> data Feature = Aspect | DeBruijn | IdiomBrackets | OverrideImps | TypesToKinds | Superclass
+> data Feature = Aspect | DeBruijn | IdiomBrackets | OverrideImps | DependentQuantifiers | Superclass
 >   deriving (Show, Eq)
 
 > data FeatureReq = FeatReq Feature [Feature]
@@ -26,14 +26,14 @@
 >   | f == show Aspect        = Just $ FeatReq Aspect []
 >   | f == show DeBruijn      = Just $ FeatReq DeBruijn []
 >   | f == show IdiomBrackets = Just $ FeatReq IdiomBrackets []
->   | f == show OverrideImps  = Just $ FeatReq OverrideImps [TypesToKinds]
->   | f == show TypesToKinds  = Just $ FeatReq TypesToKinds []
+>   | f == show OverrideImps  = Just $ FeatReq OverrideImps [DependentQuantifiers]
+>   | f == show DependentQuantifiers  = Just $ FeatReq DependentQuantifiers []
 >   | f == show Superclass    = Just $ FeatReq Superclass []
 >   | otherwise = Nothing
 
 > allFeats :: [FeatureReq]
 > allFeats = mapMaybe make [Aspect, DeBruijn, IdiomBrackets,
->                           OverrideImps, TypesToKinds, Superclass] where
+>                           OverrideImps, DependentQuantifiers, Superclass] where
 >   make feat = toFeat (show feat)
 
 > pPragma :: P Tok [FeatureReq]
